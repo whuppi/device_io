@@ -23,5 +23,5 @@ concurrency:
 jobs:
   auto-close:
     permissions:
-      issues: write
+      issues: write  # label, comment on, and close resolved issues
     uses: whuppi/ci/.github/workflows/auto-close.yml@v1.0.0

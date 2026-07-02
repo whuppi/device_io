@@ -6,23 +6,30 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    cooldown:
+      default-days: 7
   - package-ecosystem: pub
     directory: /example
     schedule:
       interval: weekly
     labels: [dependencies]
+    cooldown:
+      default-days: 7
 
   # GitHub Actions — third-party action SHAs AND the whuppi/ci shared-CI pins.
   # The whuppi-ci group bundles every whuppi/ci ref (reusable workflows +
   # make-target + capabilities) into ONE bump PR, so a new whuppi/ci release
   # moves them together — mixed internal versions are impossible — and that PR
-  # runs this repo's own CI before merge. daily so a ci release is picked up
-  # promptly; the consumer still merges on its own schedule.
+  # runs this repo's own CI before merge. Checked daily; a release must age
+  # past the cooldown before its PR opens (supply-chain safety), and the
+  # consumer still merges on its own schedule.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: daily
     labels: [dependencies]
+    cooldown:
+      default-days: 7
     groups:
       whuppi-ci:
         patterns: ["whuppi/ci"]

@@ -19,8 +19,8 @@ concurrency:
 jobs:
   upgrade:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write       # pushes the chore/flutter-sdk + chore/lockfiles branches
+      pull-requests: write  # opens / edits the upgrade PRs
     uses: whuppi/ci/.github/workflows/upgrade-check.yml@v1.0.0
     with:
       branch: dev
