@@ -1,3 +1,26 @@
+// device_io example — every capability, one file.
+//
+// ONE file on purpose — pub.dev renders example/lib/main.dart as the
+// package's Example tab. Splitting it hides everything past main.dart
+// from that page. Do not modularize.
+//
+// Four tabs, one per API surface:
+//   Pick   — assetPicker: gallery images, camera capture, videos,
+//            mixed media, generic files. Picked assets are lazy —
+//            bytes are read on tap, never at pick time.
+//   Share  — sharing: text, single file, multiple files in one
+//            sheet, and a ~1MB byte stream.
+//   Save   — download: silent save to downloads, streamed save,
+//            and the user-picks-destination system dialog.
+//   Open   — fileOpener: open in-memory bytes in the default
+//            viewer, and open the last silently-saved path.
+//
+// Every call returns a sealed PlatformResult. One renderer
+// (_record) exhaustively switches the family and writes the outcome
+// into the activity log — the log sits below the TabBarView, global
+// across all tabs. All demo bytes are generated in code; nothing
+// touches assets or the network.
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -356,163 +379,215 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('device_io example'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(
+                icon: Icon(Icons.photo_library_outlined, size: 20),
+                text: 'Pick',
+              ),
+              Tab(
+                icon: Icon(Icons.ios_share_outlined, size: 20),
+                text: 'Share',
+              ),
+              Tab(icon: Icon(Icons.download_outlined, size: 20), text: 'Save'),
+              Tab(
+                icon: Icon(Icons.open_in_new_outlined, size: 20),
+                text: 'Open',
+              ),
+            ],
+          ),
+        ),
+        // The activity log sits BELOW the TabBarView — global, visible on
+        // every tab, so a result is never hidden by tab switching.
+        body: Column(
+          children: [
+            Expanded(
+              child: TabBarView(
+                children: [_pickTab(), _shareTab(), _saveTab(), _openTab()],
+              ),
+            ),
+            _ActivityLog(entries: _log),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pickTab() {
     final cameraSupported = _io.assetPicker.isCameraSupported;
-    return Scaffold(
-      appBar: AppBar(title: const Text('device_io example')),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _Section(
+          title: 'Pick',
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                _Section(
-                  title: 'Pick',
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.tonal(
-                          onPressed: _pickImage,
-                          child: const Text('pickImage'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _pickImages,
-                          child: const Text('pickImages'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: cameraSupported ? _captureImage : null,
-                          child: Text(
-                            cameraSupported
-                                ? 'captureImage'
-                                : 'captureImage (no camera)',
-                          ),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _pickVideo,
-                          child: const Text('pickVideo'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: cameraSupported ? _captureVideo : null,
-                          child: Text(
-                            cameraSupported
-                                ? 'captureVideo'
-                                : 'captureVideo (no camera)',
-                          ),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _pickMedia,
-                          child: const Text('pickMedia'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _pickMultipleMedia,
-                          child: const Text('pickMultipleMedia'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _pickFile,
-                          child: const Text('pickFile'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _pickFiles,
-                          child: const Text('pickFiles'),
-                        ),
-                      ],
-                    ),
-                    if (_picked.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Tap a picked asset to read its bytes on demand:',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 4),
-                      ..._picked.map(_pickedTile),
-                    ],
-                  ],
+                FilledButton.tonal(
+                  onPressed: _pickImage,
+                  child: const Text('pickImage'),
                 ),
-                _Section(
-                  title: 'Share',
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.tonal(
-                          onPressed: _shareText,
-                          child: const Text('shareText'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _shareFile,
-                          child: const Text('shareFile'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _shareFiles,
-                          child: const Text('shareFiles (CSV + text)'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _shareFileStream,
-                          child: const Text('shareFileStream (~1MB)'),
-                        ),
-                      ],
-                    ),
-                  ],
+                FilledButton.tonal(
+                  onPressed: _pickImages,
+                  child: const Text('pickImages'),
                 ),
-                _Section(
-                  title: 'Save',
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.tonal(
-                          onPressed: _saveToDevice,
-                          child: const Text('saveToDevice (CSV)'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _saveStreamToDevice,
-                          child: const Text('saveStreamToDevice'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _saveAs,
-                          child: const Text('saveAs'),
-                        ),
-                      ],
-                    ),
-                    if (_lastSavedPath != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Last saved: $_lastSavedPath',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ],
+                FilledButton.tonal(
+                  onPressed: cameraSupported ? _captureImage : null,
+                  child: Text(
+                    cameraSupported
+                        ? 'captureImage'
+                        : 'captureImage (no camera)',
+                  ),
                 ),
-                _Section(
-                  title: 'Open',
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.tonal(
-                          onPressed: _openBytes,
-                          child: const Text('openBytes'),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _lastSavedPath != null
-                              ? _openLastSaved
-                              : null,
-                          child: const Text('openPath (last saved)'),
-                        ),
-                      ],
-                    ),
-                  ],
+                FilledButton.tonal(
+                  onPressed: _pickVideo,
+                  child: const Text('pickVideo'),
+                ),
+                FilledButton.tonal(
+                  onPressed: cameraSupported ? _captureVideo : null,
+                  child: Text(
+                    cameraSupported
+                        ? 'captureVideo'
+                        : 'captureVideo (no camera)',
+                  ),
+                ),
+                FilledButton.tonal(
+                  onPressed: _pickMedia,
+                  child: const Text('pickMedia'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _pickMultipleMedia,
+                  child: const Text('pickMultipleMedia'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _pickFile,
+                  child: const Text('pickFile'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _pickFiles,
+                  child: const Text('pickFiles'),
                 ),
               ],
             ),
-          ),
-          _ActivityLog(entries: _log),
-        ],
-      ),
+            if (_picked.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Tap a picked asset to read its bytes on demand:',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 4),
+              ..._picked.map(_pickedTile),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _shareTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _Section(
+          title: 'Share',
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonal(
+                  onPressed: _shareText,
+                  child: const Text('shareText'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _shareFile,
+                  child: const Text('shareFile'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _shareFiles,
+                  child: const Text('shareFiles (CSV + text)'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _shareFileStream,
+                  child: const Text('shareFileStream (~1MB)'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _saveTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _Section(
+          title: 'Save',
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonal(
+                  onPressed: _saveToDevice,
+                  child: const Text('saveToDevice (CSV)'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _saveStreamToDevice,
+                  child: const Text('saveStreamToDevice'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _saveAs,
+                  child: const Text('saveAs'),
+                ),
+              ],
+            ),
+            if (_lastSavedPath != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Last saved: $_lastSavedPath',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _openTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _Section(
+          title: 'Open',
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonal(
+                  onPressed: _openBytes,
+                  child: const Text('openBytes'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _lastSavedPath != null ? _openLastSaved : null,
+                  child: const Text('openPath (last saved)'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
     );
   }
 

@@ -1,17 +1,32 @@
-# device_io_example
+# device_io example
 
-A new Flutter project.
+A Flutter app exercising every `device_io` capability — pick, share, save,
+and open files through one API. Four tabs, one per API surface, with a
+global activity log showing every `PlatformResult` outcome. All demo bytes
+are generated in code; nothing touches the filesystem or network to start.
+Runs on macOS, iOS, Android, Windows, Linux, and web.
 
-## Getting Started
+## Run
 
-This project is a starting point for a Flutter application.
+```bash
+cd example
 
-A few resources to get you started if this is your first Flutter project:
+# desktop
+fvm flutter run -d macos
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+# web
+fvm flutter run -d chrome
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# any connected device
+fvm flutter run -d <device>
+```
+
+## Platform setup
+
+The iOS `Info.plist` usage strings (photo library, camera, microphone) and
+the macOS user-selected read-write entitlements are already configured in
+this example.
+
+## Tests
+
+Integration tests land alongside the package test suite.
