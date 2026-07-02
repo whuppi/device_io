@@ -16,6 +16,17 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_driver:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  # Journey fakes substitute plugins at their platform-interface seams —
+  # the same discipline as the package suite (never import a plugin's
+  # own Dart in a test).
+  plugin_platform_interface: ^2.1.8
+  image_picker_platform_interface: ^2.11.0
+  path_provider_platform_interface: ^2.1.2
 
   flutter_lints: ^6.0.0
 

@@ -14,6 +14,7 @@ VERBOSE := $(if $(CI),--verbose,)
 .PHONY: check hooks \
         analyze analyze-floor platforms format test-guards \
         test test-unit test-web \
+        test-example test-example-matrix test-example-macos test-example-device \
         clean
 
 # ═══════════════════════════════════════════════════════════════════
@@ -25,7 +26,7 @@ VERBOSE := $(if $(CI),--verbose,)
 #               Idempotent.
 # ═══════════════════════════════════════════════════════════════════
 
-check: format analyze analyze-floor platforms test-guards test
+check: format analyze analyze-floor platforms test-guards test test-example-matrix
 
 hooks:
 	@git config core.hooksPath .githooks
@@ -132,6 +133,31 @@ test-web:
 	@echo "=== Web adapters: real Chrome ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
 	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) --platform chrome test/web_runners --file-reporter json:$(TEST_RESULTS_DIR)/web.json
+
+# ═══════════════════════════════════════════════════════════════════
+# § 3b — Example tests
+#
+# make test-example-matrix   Host-VM journeys: the example UI driven end
+#                            to end through the real adapters against
+#                            scripted plugin edges, across every device
+#                            profile. No device needed — part of check.
+# make test-example-macos    Integration smoke on macOS (real plugins).
+# make test-example-device   Integration smoke on DEVICE=<id>.
+# ═══════════════════════════════════════════════════════════════════
+
+test-example: test-example-matrix test-example-macos
+
+test-example-matrix:
+	@echo "=== Example: journey matrix (host VM, every device profile) ==="
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/journeys
+
+test-example-macos:
+	@echo "=== Example: integration smoke on macOS ==="
+	cd example && $(FLUTTER) test $(TIMEOUT) integration_test/device_io_smoke_test.dart -d macos
+
+test-example-device:
+	@echo "=== Example: integration smoke on device=$(DEVICE) ==="
+	cd example && $(FLUTTER) test $(TIMEOUT) integration_test/device_io_smoke_test.dart -d $(DEVICE)
 
 # ═══════════════════════════════════════════════════════════════════
 # § 4 — Clean
