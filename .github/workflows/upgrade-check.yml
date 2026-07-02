@@ -1,0 +1,26 @@
+# Upgrade Check — daily PRs refreshing the Flutter SDK pin (.fvmrc) and the
+# lockfiles to latest in-range. Delegates to the shared reusable workflow. The
+# shared tool/binary pins (fvm, Chrome, bore, ...) are NOT here — whuppi/ci owns
+# those, and they arrive via a whuppi/ci release + a grouped Dependabot bump.
+name: Upgrade Check
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # daily at 8am UTC
+  workflow_dispatch:
+
+permissions: {}
+
+# Daily radar — never cancel an in-flight run.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  upgrade:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: whuppi/ci/.github/workflows/upgrade-check.yml@v1.0.0
+    with:
+      branch: dev

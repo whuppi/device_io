@@ -15,6 +15,10 @@ VERBOSE := $(if $(CI),--verbose,)
         analyze analyze-floor platforms format test-guards \
         test test-unit test-web \
         test-example test-example-matrix test-example-macos test-example-device \
+        test-example-android test-example-ios test-example-linux \
+        test-example-windows test-example-web \
+        verify-android verify-ios verify-macos verify-linux \
+        verify-windows verify-web \
         clean
 
 # ═══════════════════════════════════════════════════════════════════
@@ -143,6 +147,17 @@ test-web:
 #                            profile. No device needed — part of check.
 # make test-example-macos    Integration smoke on macOS (real plugins).
 # make test-example-device   Integration smoke on DEVICE=<id>.
+#
+# make test-example-<plat>   Integration smoke on one real target
+#                            (android / ios / linux / windows / web). The
+#                            per-platform CI matrix (full-test) runs these;
+#                            each boots its device via the make-target
+#                            capabilities. Android + iOS run on the
+#                            booted emulator/simulator (no -d); the Android
+#                            report lands at test-results/int-android.json,
+#                            which the emulator teardown-watchdog reconciles.
+# make verify-<plat>         Release build of the example — proves the
+#                            plugin links and packages on that target.
 # ═══════════════════════════════════════════════════════════════════
 
 test-example: test-example-matrix test-example-macos
@@ -158,6 +173,89 @@ test-example-macos:
 test-example-device:
 	@echo "=== Example: integration smoke on device=$(DEVICE) ==="
 	cd example && $(FLUTTER) test $(TIMEOUT) integration_test/device_io_smoke_test.dart -d $(DEVICE)
+
+# Android + iOS run on the connected/booted device — no -d. CI boots the
+# emulator/simulator via the make-target capabilities. The Android JSON
+# report is what the emulator watchdog's reconciler reads.
+test-example-android:
+	@echo "=== Example: Android ==="
+	@mkdir -p $(TEST_RESULTS_DIR)
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart --file-reporter json:../$(TEST_RESULTS_DIR)/int-android.json
+
+test-example-ios:
+	@echo "=== Example: iOS ==="
+	@mkdir -p $(TEST_RESULTS_DIR)
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart --file-reporter json:../$(TEST_RESULTS_DIR)/int-ios.json
+
+test-example-linux:
+	@echo "=== Example: Linux ==="
+	$(call ensure_gtk)
+	@mkdir -p $(TEST_RESULTS_DIR)
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart -d linux --file-reporter json:../$(TEST_RESULTS_DIR)/int-linux.json
+
+test-example-windows:
+	@echo "=== Example: Windows ==="
+	@mkdir -p $(TEST_RESULTS_DIR)
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart -d windows --file-reporter json:../$(TEST_RESULTS_DIR)/int-windows.json
+
+# Web integration runs through flutter drive (-d web-server) with a single
+# Chrome managed by chromedriver — the same shape as pdf_manipulator's web
+# path, minus its WASM threading modes (device_io has none). The chrome
+# capability puts chromedriver on PATH in CI. One shell so the background
+# chromedriver PID survives to the cleanup.
+test-example-web:
+	@echo "=== Example: Web (integration smoke via flutter drive) ==="
+	@chromedriver --port=4444 >/dev/null 2>&1 & \
+	CD_PID=$$!; \
+	sleep 2; \
+	( cd example && $(FLUTTER) drive \
+	    --driver=test_driver/integration_test.dart \
+	    --target=integration_test/device_io_smoke_test.dart \
+	    -d web-server \
+	    --browser-name=chrome \
+	    --driver-port=4444 \
+	    --web-browser-flag=--no-sandbox ); \
+	rc=$$?; \
+	kill $$CD_PID 2>/dev/null || true; \
+	exit $$rc
+
+# ── Verify: release builds of the example ──
+verify-android:
+	@echo "=== Verify: Android ==="
+	cd example && $(FLUTTER) build apk --release $(VERBOSE)
+
+verify-ios:
+	@echo "=== Verify: iOS ==="
+	cd example && $(FLUTTER) build ios --release --no-codesign $(VERBOSE)
+
+verify-macos:
+	@echo "=== Verify: macOS ==="
+	cd example && $(FLUTTER) build macos --release $(VERBOSE)
+
+verify-linux:
+	@echo "=== Verify: Linux ==="
+	$(call ensure_gtk)
+	cd example && $(FLUTTER) build linux --release $(VERBOSE)
+
+verify-windows:
+	@echo "=== Verify: Windows ==="
+	cd example && $(FLUTTER) build windows --release $(VERBOSE)
+
+verify-web:
+	@echo "=== Verify: Web ==="
+	cd example && $(FLUTTER) build web --release $(VERBOSE)
+
+# ═══════════════════════════════════════════════════════════════════
+# § 3c — Build helpers
+# ═══════════════════════════════════════════════════════════════════
+
+# Linux desktop builds need GTK 3. Present → no-op. Missing → install on
+# CI, instruct locally.
+define ensure_gtk
+	@command -v pkg-config >/dev/null && pkg-config --exists gtk+-3.0 || { \
+		if [ -n "$$CI" ]; then sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build libgtk-3-dev; \
+		else echo "Error: libgtk-3-dev not found. Run: sudo apt-get install -y ninja-build libgtk-3-dev"; exit 1; fi; }
+endef
 
 # ═══════════════════════════════════════════════════════════════════
 # § 4 — Clean
