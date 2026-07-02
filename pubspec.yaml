@@ -1,0 +1,29 @@
+name: device_io
+version: 0.0.1
+publish_to: none
+description: >
+  Cross-platform device IO abstraction for Flutter.
+  Unified interfaces for image/file picking, sharing, downloading,
+  and opening files — works identically on iOS, Android, macOS,
+  Windows, Linux, and web.
+
+# Shared package at the workspace root — consumed by path from sewali + bokumi.
+# Not a Dart pub workspace member (no `resolution: workspace`).
+
+environment:
+  sdk: ">=3.11.0-0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.1.2     # Asset/image picking
+  file_picker: ^8.1.6      # Generic file picking
+  share_plus: ^11.1.0      # OS share sheet
+  path_provider: ^2.1.5    # Downloads directory
+  web: ^1.1.0              # Web APIs (file input, share, blob)
+  open_filex: ^4.6.0       # Open files in external apps
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: any
