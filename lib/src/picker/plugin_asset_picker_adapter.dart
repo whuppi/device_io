@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:device_io/src/picker/asset_picker_adapter.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
+import 'package:device_io/src/picker/web_file_pick.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
@@ -16,9 +17,14 @@ import 'package:device_io/src/types/platform_result.dart';
 // The underlying plugins are already federated across all platforms and
 // this file touches neither dart:io nor package:web, so a per-platform
 // pair here would be a fake matrix: two near-identical copies diverging
-// only where flagged with kIsWeb below (web file picks having no lazy
-// handle). The other capabilities keep their native/web adapter pairs
-// because they genuinely bind platform APIs.
+// only where flagged with kIsWeb below:
+//   - camera capture support (mobile only);
+//   - web file picks prefer the File System Access picker (lazy) where the
+//     browser has it, and fall back to file_picker's eager bytes where it
+//     doesn't — the one true platform bind is behind the stub-default
+//     conditional export in web_file_pick.dart, not in this file.
+// The other capabilities keep their native/web adapter pairs because they
+// genuinely bind platform APIs.
 final class PluginAssetPickerAdapter implements AssetPickerAdapter {
   final _picker = ImagePicker();
 
@@ -197,6 +203,15 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
     required List<String>? allowedExtensions,
     required bool allowMultiple,
   }) async {
+    // On web with the File System Access API, pick lazily via blob-backed
+    // handles (no eager load of the whole selection). Null means the path
+    // doesn't apply here — fall through to the file_picker path below.
+    final lazy = await lazyWebFilePick(
+      allowMultiple: allowMultiple,
+      allowedExtensions: allowedExtensions,
+    );
+    if (lazy != null) return lazy;
+
     try {
       final result = await FilePicker.pickFiles(
         type: allowedExtensions != null ? FileType.custom : FileType.any,
