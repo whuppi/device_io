@@ -1,0 +1,26 @@
+name: device_io_example
+description: >-
+  Example app demonstrating device_io — pick images and files, share via the
+  OS sheet, save to device, and open in the default viewer, all through one
+  API across iOS, Android, macOS, Windows, Linux, and web.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  device_io:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
