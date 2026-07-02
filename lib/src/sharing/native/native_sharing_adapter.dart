@@ -1,7 +1,16 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:share_plus/share_plus.dart';
+// The platform INTERFACE, not package:share_plus/share_plus.dart — the
+// plugin's barrel unconditionally exports its Linux and Windows impls,
+// which import url_launcher_linux / url_launcher_windows (each declaring
+// a single platform), so importing the barrel drops every desktop
+// platform from pub.dev's attribution of THIS package. The share_plus
+// dependency stays in pubspec: it carries the native implementations and
+// the generated plugin registrant wires SharePlatform.instance from the
+// dependency alone. SharePlus.instance is a thin delegator over
+// SharePlatform.instance, so behavior is identical.
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 
 import 'package:device_io/src/_shared/native_fs.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
@@ -18,7 +27,7 @@ final class NativeSharingAdapter implements SharingAdapter {
     String? subject,
   }) async {
     try {
-      final result = await SharePlus.instance.share(
+      final result = await SharePlatform.instance.share(
         ShareParams(text: text, subject: subject),
       );
       return _fromShareResult(result);
@@ -83,7 +92,7 @@ final class NativeSharingAdapter implements SharingAdapter {
         write: writeTo,
       );
 
-      final result = await SharePlus.instance.share(
+      final result = await SharePlatform.instance.share(
         ShareParams(
           files: [
             XFile(

@@ -32,10 +32,15 @@ dependencies:
   # Generic file picking + the system save dialogs behind saveAs
   file_picker: ^11.0.2
 
-  # OS share sheet. 13.x requires win32 ^6 while every stable file_picker
-  # (<12.0.0-beta) requires win32 ^5 — bump both together when
-  # file_picker 12 leaves beta.
+  # OS share sheet — REGISTRATION ONLY: code imports go through the
+  # platform interface below, because this barrel's desktop impls pin
+  # url_launcher_linux/windows and poison pub.dev platform attribution.
+  # 13.x requires win32 ^6 while every stable file_picker (<12.0.0-beta)
+  # requires win32 ^5 — bump both together when file_picker 12 leaves beta.
   share_plus: ^12.0.0
+
+  # The share_plus API surface this package actually imports
+  share_plus_platform_interface: ^6.1.0
 
   # Downloads / documents directories for silent native saves
   path_provider: ^2.1.5
@@ -43,8 +48,10 @@ dependencies:
   # Web APIs — blob downloads, Web Share, File System Access types
   web: ^1.1.0
 
-  # Open files in the OS default app on iOS/Android
-  open_filex: ^4.6.0
+  # Native file-open for iOS/Android — REGISTRATION ONLY: its method
+  # channel is invoked directly (the plugin declares just android + ios,
+  # so importing its Dart would drop desktop platform attribution)
+  open_filex: ^4.7.0
 
   # Full MIME database behind the curated maps in mime_types.dart
   mime: ^2.0.0

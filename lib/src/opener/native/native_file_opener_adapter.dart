@@ -1,9 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
-import 'package:open_filex/open_filex.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 
 import 'package:device_io/src/_shared/native_fs.dart';
 import 'package:device_io/src/opener/file_opener_adapter.dart';
@@ -72,21 +73,32 @@ final class NativeFileOpenerAdapter implements FileOpenerAdapter {
     }
   }
 
+  // open_filex's method channel, invoked directly instead of importing its
+  // Dart API: the plugin declares only android + ios, so importing it drops
+  // every desktop platform from pub.dev's attribution of THIS package. The
+  // dependency stays in pubspec — it carries the Android content-URI and
+  // iOS UIDocumentInteractionController native code the channel reaches.
+  // Protocol verified against open_filex 4.7.0 source; result codes:
+  // 0 done · -1 no app · -2 not found · -3 permission denied · -4 error.
+  static const _openFileChannel = MethodChannel('open_file');
+
   Future<PlatformResult<void>> _openMobile(
     String filePath,
     String? mimeType,
   ) async {
-    final result = await OpenFilex.open(filePath, type: mimeType);
-    return switch (result.type) {
-      ResultType.done => const PlatformSupported(null),
-      ResultType.fileNotFound => PlatformFailed('File not found: $filePath'),
-      ResultType.noAppToOpen => const PlatformFailed(
-        'No app available to open this file type',
-      ),
-      ResultType.permissionDenied => PlatformPermissionDenied(
-        message: result.message,
-      ),
-      ResultType.error => PlatformFailed(result.message),
+    final raw = await _openFileChannel.invokeMethod<String>('open_file', {
+      'file_path': filePath,
+      'type': mimeType,
+      'uti': null,
+    });
+    final result = jsonDecode(raw!) as Map<String, dynamic>;
+    final message = result['message'] as String? ?? '';
+    return switch (result['type'] as int?) {
+      0 => const PlatformSupported(null),
+      -1 => const PlatformFailed('No app available to open this file type'),
+      -2 => PlatformFailed('File not found: $filePath'),
+      -3 => PlatformPermissionDenied(message: message),
+      _ => PlatformFailed(message),
     };
   }
 
