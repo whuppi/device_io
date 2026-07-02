@@ -2,7 +2,9 @@
   Banner is commented out until the assets exist. Drop
   assets/banner_dark-web-min.webp + assets/banner_light-web-min.webp in,
   then uncomment. Kept out of the render so there's no broken image in the
-  meantime.
+  meantime. Note for whoever adds it: pub.dev strips <picture> when it
+  sanitizes the README, so the published copy needs the inner <img>
+  flattened out (the repo copy can keep <picture> for GitHub dark/light).
 
   <p align="center">
     <picture>
@@ -64,7 +66,7 @@ dependencies:
   device_io:
 ```
 
-Then call `initDeviceIO()` once at startup and hold onto the result (see [Quick start](#quick-start)). The picker, share, save, and open plugins underneath are federated across all six platforms, so there's no per-platform Dart to wire up. What each platform *does* need is the permission and entitlement declarations below — the OS requires them, and the package can't add them to your app for you.
+Then call `initDeviceIO()` once at startup and hold onto the result (see [Quick start](#quick-start)). The picker, share, save, and open plugins underneath are federated across all six platforms, so there's no per-platform Dart to wire up. What each platform *does* need is the permission and entitlement declarations below — the OS requires them, and no package can add them to your app for you.
 
 ### iOS
 
@@ -131,7 +133,7 @@ if (picked case PlatformSupported(value: final asset)) {
 }
 ```
 
-The `if (... case ...)` handles the happy path. When you want to react to every outcome — a user who backed out, a desktop with no camera, a genuine error — `switch` over the sealed result and the compiler makes sure you covered each arm:
+That's the shape of every call: ask a capability, get a `PlatformResult`, match the outcome you care about. `pickImage`, `shareFile`, `saveToDevice`, `openBytes` — same shape, a different verb. The `if (... case ...)` above handles just the happy path; when you want to react to every outcome, `switch` over the sealed result and let the compiler check you covered each arm:
 
 ```dart
 final result = await deviceIO.assetPicker.pickImage();
@@ -149,8 +151,6 @@ switch (result) {
 }
 ```
 
-`PlatformPermissionDenied` sits before `PlatformFailed` on purpose: it's a subtype, so a bare `PlatformFailed()` arm catches it too. Put the specific arm first when denial deserves its own recovery (send the user to Settings), or drop it and let the generic failure arm handle everything.
-
 ---
 
 ## Results
@@ -165,9 +165,7 @@ Every method returns a `PlatformResult<T>`. Five outcomes, each a distinct value
 | `PlatformPermissionDenied()` | OS blocked access (camera, photos, storage) | Point the user at Settings |
 | `PlatformFailed(message, error, stackTrace)` | Supported, but failed at runtime | Show / report the error |
 
-`PlatformPermissionDenied` extends `PlatformFailed`, so generic error handling stays a single arm while denial can still branch on its own.
-
-**Cancellation is a value, not `null` and not an exception.** A user who opens the photo picker and taps Cancel did nothing wrong. `null` couldn't tell that apart from "the platform doesn't support this," so the package spends a variant on it. The payload inside `PlatformSupported` is never null.
+`PlatformPermissionDenied` extends `PlatformFailed`, so a bare `case PlatformFailed()` catches it too — put the specific arm *before* the generic one when denial deserves its own recovery (send the user to Settings), or drop it and let the failure arm handle everything. The payload inside `PlatformSupported` is never null.
 
 Two shortcuts when a full `switch` is more than you need:
 
@@ -187,31 +185,17 @@ final label = result.when(
 `when` folds permission-denied into `failed` — reach for the `switch` when it needs its own path.
 
 <details>
-<summary><b>🧩 what "lazy read" means for a picked file</b></summary>
+<summary><b>🧩 why a sealed result instead of just throwing?</b></summary>
 
 <br>
 
-A pick doesn't hand you bytes. It hands you a `PickedAsset` with two read callbacks, and **nothing is read until you call one:**
+Because two of the five outcomes aren't errors, and exceptions can't say so.
 
-```dart
-final small = await asset.readBytes();      // whole thing, one Uint8List
-final chunks = asset.readStream();          // Stream<List<int>>, constant memory
-```
+A user who opens the photo picker and taps **Cancel** did nothing wrong. A desktop that has **no camera** isn't broken. If those threw, every call site would wrap a `try/catch` and then guess, from the exception type or its message, whether to show an error, stay quiet, or hide a button. And a nullable return (`Future<PickedAsset?>`) is no better — `null` can't tell "cancelled" apart from "unsupported."
 
-Use `readBytes()` for avatars and thumbnails. Use `readStream()` for photos, videos, model files — anything you'd rather not hold in RAM. Pipe the stream straight into a save without buffering:
+So the package spends a variant on each real outcome. `PlatformCancelled` and `PlatformUnsupported` are first-class values, not failures; `PlatformFailed` is reserved for the genuine "supported, but it broke" case, with `PlatformPermissionDenied` as a named subtype because its recovery differs (send the user to Settings, don't retry). The result type is sealed, so the compiler flags any arm you forgot — you find out at build time, not from a user's crash report.
 
-```dart
-await deviceIO.download.saveStreamToDevice(
-  byteStream: asset.readStream(),
-  fileName: asset.fileName ?? 'video.mp4',
-);
-```
-
-Each `readStream()` call returns a **fresh** stream, so you can read the same asset more than once. There's no `filePath` and no eager `bytes` field on purpose — paths don't exist on web, and eager bytes would OOM the first large file. Where the read comes from:
-
-- Native picks read from disk on demand.
-- Web image picks read from the browser blob on demand.
-- Web generic-file picks are the one eager case — the file-picker plugin hands over bytes, not a blob reference.
+Throws are kept for one thing only: **programmer error**. Pass an empty list to `shareFiles` and it throws `ArgumentError` synchronously — that's a bug in the call, not a runtime state to branch on.
 
 </details>
 
@@ -219,7 +203,7 @@ Each `readStream()` call returns a **fresh** stream, so you can read the same as
 
 ## Usage
 
-Four surfaces off the container: `assetPicker`, `sharing`, `download`, `fileOpener`. Every method returns a `PlatformResult`; the highlights are below.
+Four doors off the container: `assetPicker`, `sharing`, `download`, `fileOpener`. Pick the one that fits what you're doing. Highlights below; every method and full signature lives in the [API reference](https://pub.dev/documentation/device_io/latest/).
 
 ### Pick
 
@@ -258,6 +242,35 @@ if (result case PlatformSupported(:final value)) {
 }
 ```
 
+<details>
+<summary><b>🧩 what "lazy read" means for a picked file</b></summary>
+
+<br>
+
+A pick doesn't hand you bytes. It hands you a `PickedAsset` with two read callbacks, and **nothing is read until you call one:**
+
+```dart
+final small = await asset.readBytes();      // whole thing, one Uint8List
+final chunks = asset.readStream();          // Stream<List<int>>, constant memory
+```
+
+Use `readBytes()` for avatars and thumbnails. Use `readStream()` for photos, videos, model files — anything you'd rather not hold in RAM. Pipe the stream straight into a save without buffering:
+
+```dart
+await deviceIO.download.saveStreamToDevice(
+  byteStream: asset.readStream(),
+  fileName: asset.fileName ?? 'video.mp4',
+);
+```
+
+Each `readStream()` call returns a **fresh** stream, so you can read the same asset more than once. There's no `filePath` and no eager `bytes` field on purpose — paths don't exist on web, and eager bytes would OOM the first large file. Where the read comes from:
+
+- Native picks read from disk on demand.
+- Web image picks read from the browser blob on demand.
+- Web generic-file picks are the one eager case — the file-picker plugin hands over bytes, not a blob reference.
+
+</details>
+
 ### Share
 
 `deviceIO.sharing` opens the OS share sheet (Web Share API on web). Text, one file, many files, or a stream — the adapter stages temp files for you.
@@ -290,6 +303,19 @@ await sharing.shareFileStream(
 ```
 
 Every share method takes an optional `sharePositionOrigin` — the anchor rectangle the iPadOS share popover points at. iPad needs it; hand over your button's global bounds. Every other platform ignores it. `shareFiles` throws `ArgumentError` on an empty list, because a share sheet with nothing in it is a bug in the call, not a runtime state.
+
+<details>
+<summary><b>🧩 what happens to a shared or opened file afterward?</b></summary>
+
+<br>
+
+Sharing bytes and opening bytes both need a real file on disk — the OS share sheet and the default viewer take a file, not a `Uint8List`. So the adapter **stages** one: it writes your bytes into a fresh temporary directory under the OS cache, with the real filename preserved (the share sheet shows `chart.png`, not a random hash).
+
+That staged file is **deliberately not deleted** when the call returns. On Android the share `Future` resolves the moment the sheet closes — but the app you shared to reads the file *after* that, so deleting it eagerly would hand the receiver an empty file. The OS reclaims its cache directory on its own schedule; letting it do that is both correct and simpler than trying to guess when the receiver is done.
+
+Filenames are sanitized before they touch the path (traversal sequences, Windows-reserved names, control characters), and every staging call gets its own directory, so two shares of `photo.png` never collide. None of this is anything you call — it's what `shareFile` / `shareFiles` / `openBytes` do for you.
+
+</details>
 
 ### Save
 
@@ -335,7 +361,7 @@ if (saved case PlatformSupported(value: final String path)) {
 
 ## Error handling
 
-The physics: **failures are values, not thrown exceptions.** A method that hits a real error returns `PlatformFailed(message, error, stackTrace)` — the human-readable `message` for a snackbar, plus the original caught `error` and its `stackTrace` for logging or crash reporting.
+When something genuinely breaks, you get a `PlatformFailed` carrying three things: a human-readable `message` for a snackbar, plus the original `error` and its `stackTrace` for logging or crash reporting.
 
 ```dart
 final result = await deviceIO.download.saveAs(bytes: bytes, fileName: 'report.pdf');
@@ -343,7 +369,7 @@ switch (result) {
   case PlatformSupported(:final value):
     showSaved(value);
   case PlatformCancelled():
-    break; // dismissed the dialog
+    break; // dismissed the dialog — nothing to report
   case PlatformPermissionDenied():
     promptForSettings();
   case PlatformFailed(:final message, :final error, :final stackTrace):
@@ -351,7 +377,7 @@ switch (result) {
 }
 ```
 
-`message` is a diagnostic string, not a localized one — your app translates for its users. Permission denials arrive as `PlatformPermissionDenied` (a `PlatformFailed` subtype), because the recovery is different: send the user to system settings, don't retry. The package maps the platform plugins' exact permission codes to that variant so you don't string-match error text.
+`message` is a diagnostic string, not a localized one — your app translates for its users. Permission denials arrive as `PlatformPermissionDenied` (a `PlatformFailed` subtype, see [Results](#results)) because the recovery differs: send the user to system settings, don't retry. The package maps each plugin's exact permission code to that variant, so you never string-match error text.
 
 ---
 
@@ -367,6 +393,19 @@ One API, six targets. Each capability is backed by a federated plugin (or a web 
 | **Open** | open_filex | open_filex | OS open | OS open | OS open | blob in new tab |
 
 Camera capture is available on phones and tablets — native apps and mobile browsers — and returns `PlatformUnsupported` on desktop.
+
+<details>
+<summary><b>🧩 how does one API stay honest across six platforms?</b></summary>
+
+<br>
+
+The rule the package holds itself to: **your app never writes `kIsWeb`, and it never gets a lie.** Two things make that true.
+
+**Where a platform genuinely can't do something, you get a typed `PlatformUnsupported` — never a silent no-op, and never a faked success.** `openPath` on web returns `Unsupported` because browsers have no filesystem paths; camera capture returns `Unsupported` on desktop. Every one of those claims was checked against the underlying plugin's source before it was written — the package doesn't guess at what's impossible.
+
+**pub.dev sees all six platforms, and a gate keeps it that way.** A cross-platform Flutter package silently drops a platform the moment a shared file imports something native-only. Two of the dependencies here (`share_plus`, `open_filex`) would do exactly that if imported the obvious way, so the package reaches them through their platform interface and method channel instead, and a [pana](https://pub.dev/packages/pana) check in the test suite fails the build if the six-platform score ever regresses. The upshot for you: the badge is earned, not asserted.
+
+</details>
 
 ### Where saves land
 
