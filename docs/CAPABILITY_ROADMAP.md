@@ -40,7 +40,7 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Silent save (stream) | DONE | `.part`-then-rename; failed stream leaves nothing |
 | `saveAs` via system dialog | DONE | SAF (Android) / Files export (iOS) / native dialog (desktop) / File System Access with download fallback (web); `mimeType` feeds the fallback's blob type |
 | Web streaming `saveAs` writes | DONE | `FileSystemWritableFileStream` on Chromium |
-| Silent save to PUBLIC storage on mobile | PLANNED | Needs MediaStore native code (a plugin or our own channel) — `saveToDevice` on mobile is app-private today, documented loudly |
+| Silent save to PUBLIC storage on mobile | WONT_DO (for now) | Android-only gap (desktop/web `saveToDevice` already land user-visible; iOS has no public Downloads at all) whose fix needs first-party MediaStore native code — an identity change from plugin-wrapper to plugin. `saveAs` is the user-visible mobile answer. Revisit if a consumer app needs background exports to public storage. |
 | Silent streaming saves on web | WONT_DO (for now) | A no-dialog streaming write needs a File System Access handle, which only user-initiated dialogs can produce; revisit if a handle-reuse API is added |
 
 ## Opening — `FileOpenerAdapter`
