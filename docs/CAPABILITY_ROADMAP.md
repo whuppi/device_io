@@ -69,4 +69,4 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Makefile gates (format / analyze / analyze-floor / platforms) | DONE | |
 | Test suite (mirror VM suites + real-Chrome web runners) | DONE | Chartered behavioral tests; recording fakes at platform-interface seams; instrumented JS surface in real Chrome; mechanical guards (`make test-guards`). Shape in `ARCHITECTURE.md` |
 | Example app | DONE | Six platforms, one exhaustive `PlatformResult` renderer, lazy reads on tap; the integration smoke test joins the test-suite rebuild |
-| CI via the shared workflow repo | PLANNED | device_io is the first consumer of `whuppi/ci` |
+| CI via the shared workflow repo | DONE | First consumer of `whuppi/ci@v1.0.0`. Thin caller stubs over the reusable workflows; fast PR gate in `ci.yml` (format/analyze/floor/platforms/guards/unit/web via `make-target`); label-triggered cross-target matrix in `full-test.yml` (package × OS, host journeys, real-device integration smokes, release verify); release via the reusable gate → discover → publish workflow (no binaries). Shared-CI upgrades arrive as grouped Dependabot PRs, tested by that PR's own CI |

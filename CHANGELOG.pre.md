@@ -37,3 +37,7 @@ save, open. One API on iOS, Android, macOS, Windows, Linux, and web.
 - **Platforms:** pub.dev attributes all six platforms; the stub-default
   conditional import and the registration-only dependency pattern are
   guarded by the pana platform gate (`make platforms`).
+- **CI:** first consumer of the `whuppi/ci` shared workflows — fast PR gate,
+  label-triggered cross-target full test (package × OS, host journeys,
+  real-device integration smokes, release verify), triage / auto-close /
+  labels / retry hygiene, and the changelog-driven release pipeline.

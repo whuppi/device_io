@@ -38,6 +38,10 @@ fvm flutter test integration_test/device_io_smoke_test.dart -d <device>
 cd ..
 make test-example-matrix
 make test-example-macos
+
+# one real target at a time (CI's full-test runs each of these):
+make test-example-android   # also: -ios, -linux, -windows, -web
+make verify-macos           # release build; also: -android, -ios, -linux, -windows, -web
 ```
 
 The host journeys stay in memory (no `dart:io`) — they drive the UI

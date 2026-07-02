@@ -78,8 +78,16 @@ the fix. iOS needs the three usage-description keys.
 
 ## Releasing
 
-Versions, tags, and publishing belong to the release tooling (the
-shared-workflow setup): `version: 0.0.0` in pubspec and
-`lib/src/version.dart` are placeholders stamped at publish time from the
-changelog's top untagged heading. You only write the changelog summary —
-one untagged version max per lane file.
+Versions, tags, and publishing belong to the reusable `whuppi/ci` release
+workflow (`.github/workflows/release.yml` calls it): `version: 0.0.0` in
+pubspec and `lib/src/version.dart` are placeholders stamped at publish time
+from the changelog's top untagged heading. You only write the changelog
+summary — one untagged version max per lane file.
+
+Pushing a new top heading to a lane changelog on its branch triggers the
+pipeline: **gate** (refuse a lane whose changelog adds >1 unreleased version)
+→ **discover** (stamp the tag tree, create the GitHub release) → **publish**
+(build the pub.dev changelog + README, `dart pub publish`). dev reacts to
+`CHANGELOG.pre.md` (prereleases), prod to `CHANGELOG.md` (stable). Publish
+waits on the branch-named GitHub environment approval, so a human gates every
+pub.dev push.
