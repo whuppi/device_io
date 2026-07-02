@@ -1,4 +1,5 @@
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
@@ -16,12 +17,21 @@ class WebSharingAdapter implements SharingAdapter {
     required String text,
     String? subject,
   }) async {
+    // Feature-detect instead of calling and string-matching the TypeError.
+    if (!_shareSupported) {
+      return const PlatformUnsupported(
+        'Sharing is not supported in this browser',
+      );
+    }
     try {
-      final data = web.ShareData(text: text, title: subject ?? '');
+      final data = web.ShareData(text: text);
+      if (subject != null) data.title = subject;
+
       await web.window.navigator.share(data).toDart;
       return const PlatformSupported(null);
-    } catch (e) {
-      return _mapShareError(e, 'Failed to share text');
+    } catch (e, st) {
+      if (e is Error) rethrow; // Programmer bugs crash loudly.
+      return _mapShareError(e, st, 'Failed to share text');
     }
   }
 
@@ -33,6 +43,11 @@ class WebSharingAdapter implements SharingAdapter {
     String? subject,
     String? text,
   }) async {
+    if (!_shareSupported) {
+      return const PlatformUnsupported(
+        'Sharing is not supported in this browser',
+      );
+    }
     try {
       final blob = web.Blob(
         [bytes.toJS].toJS,
@@ -44,13 +59,12 @@ class WebSharingAdapter implements SharingAdapter {
         web.FilePropertyBag(type: mimeType ?? 'application/octet-stream'),
       );
 
-      final data = web.ShareData(
-        files: [file].toJS,
-        title: subject ?? '',
-        text: text ?? '',
-      );
+      final data = web.ShareData(files: [file].toJS);
+      if (subject != null) data.title = subject;
+      if (text != null) data.text = text;
 
-      // Check if the browser can share files.
+      // canShare validates the payload (file sharing arrived later than
+      // text sharing — Safari and Firefox gained it separately).
       if (!web.window.navigator.canShare(data)) {
         return const PlatformUnsupported(
           'File sharing is not supported in this browser',
@@ -59,8 +73,9 @@ class WebSharingAdapter implements SharingAdapter {
 
       await web.window.navigator.share(data).toDart;
       return const PlatformSupported(null);
-    } catch (e) {
-      return _mapShareError(e, 'Failed to share file');
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return _mapShareError(e, st, 'Failed to share "$fileName"');
     }
   }
 
@@ -79,8 +94,13 @@ class WebSharingAdapter implements SharingAdapter {
       await for (final chunk in byteStream) {
         builder.add(chunk);
       }
-    } catch (e) {
-      return PlatformFailed('Failed to read the byte stream', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed(
+        'Failed to read the byte stream',
+        error: e,
+        stackTrace: st,
+      );
     }
     return shareFile(
       bytes: builder.takeBytes(),
@@ -91,25 +111,46 @@ class WebSharingAdapter implements SharingAdapter {
     );
   }
 
-  /// Web Share errors arrive as untyped JS DOMExceptions — string matching
-  /// on the exception name is the only signal available.
-  PlatformResult<void> _mapShareError(Object e, String message) {
-    final text = e.toString();
-    if (text.contains('AbortError')) {
+  bool get _shareSupported =>
+      web.window.navigator.hasProperty('share'.toJS).toDart;
+
+  PlatformResult<void> _mapShareError(Object e, StackTrace st, String message) {
+    final name = _domExceptionName(e);
+    if (name == 'AbortError') {
       return const PlatformCancelled();
     }
-    if (text.contains('not a function') || text.contains('NotSupportedError')) {
+    if (name == 'NotAllowedError') {
+      return PlatformPermissionDenied(
+        message:
+            'The browser blocked sharing (needs a user gesture or '
+            'permission)',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    if (name == 'NotSupportedError') {
       return const PlatformUnsupported(
         'Sharing is not supported in this browser',
       );
     }
-    if (text.contains('NotAllowedError')) {
-      return const PlatformPermissionDenied(
-        message:
-            'The browser blocked sharing (needs a user gesture or '
-            'permission)',
-      );
+    return PlatformFailed(message, error: e, stackTrace: st);
+  }
+
+  /// Extracts the DOMException name from a rejected share() promise.
+  ///
+  /// A typed `is DOMException` check is not platform-consistent across
+  /// dart2js and dart2wasm (the analyzer flags it), so the portable check
+  /// is name matching on the error's string form — DOMException stringifies
+  /// as `Name: message` on every backend.
+  String? _domExceptionName(Object e) {
+    final text = e.toString();
+    for (final name in const [
+      'AbortError',
+      'NotAllowedError',
+      'NotSupportedError',
+    ]) {
+      if (text.contains(name)) return name;
     }
-    return PlatformFailed(message, error: e);
+    return null;
   }
 }

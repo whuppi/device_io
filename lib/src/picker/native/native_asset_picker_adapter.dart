@@ -1,5 +1,3 @@
-import 'dart:io' show File;
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
@@ -8,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:device_io/src/picker/asset_picker_adapter.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
-import 'package:device_io/src/types/mime_types.dart';
+import 'package:device_io/src/picker/xfile_picked_asset.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Native (mobile/desktop) asset picker using image_picker + file_picker.
@@ -52,11 +50,12 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
       if (xFiles.isEmpty) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(xFiles.map(_assetFromXFile).toList());
-    } on PlatformException catch (e) {
-      return _failure(e, 'Failed to pick images');
-    } catch (e) {
-      return PlatformFailed('Failed to pick images', error: e);
+      return PlatformSupported(xFiles.map(pickedAssetFromXFile).toList());
+    } on PlatformException catch (e, st) {
+      return _failure(e, st, 'Failed to pick images');
+    } catch (e, st) {
+      if (e is Error) rethrow; // Programmer bugs crash loudly.
+      return PlatformFailed('Failed to pick images', error: e, stackTrace: st);
     }
   }
 
@@ -83,19 +82,32 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
   Future<PlatformResult<PickedAsset>> pickFile({
     List<String>? allowedExtensions,
   }) async {
-    final result = await pickFiles(allowedExtensions: allowedExtensions);
+    final result = await _pickPlatformFiles(
+      allowedExtensions: allowedExtensions,
+      allowMultiple: false,
+    );
     return result.map((assets) => assets.first);
   }
 
   @override
   Future<PlatformResult<List<PickedAsset>>> pickFiles({
     List<String>? allowedExtensions,
+  }) {
+    return _pickPlatformFiles(
+      allowedExtensions: allowedExtensions,
+      allowMultiple: true,
+    );
+  }
+
+  Future<PlatformResult<List<PickedAsset>>> _pickPlatformFiles({
+    required List<String>? allowedExtensions,
+    required bool allowMultiple,
   }) async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: allowedExtensions != null ? FileType.custom : FileType.any,
         allowedExtensions: allowedExtensions,
-        allowMultiple: true,
+        allowMultiple: allowMultiple,
       );
 
       if (result == null || result.files.isEmpty) {
@@ -111,20 +123,14 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
           // instead of silently dropping part of the selection.
           return const PlatformFailed('Picked file has no accessible path');
         }
-        assets.add(
-          PickedAsset.fromFile(
-            mimeType: mimeTypeFromFileName(file.name),
-            fileName: file.name,
-            readBytesFromFile: () => File(path).readAsBytes(),
-            streamFromFile: () => File(path).openRead(),
-          ),
-        );
+        assets.add(pickedAssetFromXFile(XFile(path, name: file.name)));
       }
       return PlatformSupported(assets);
-    } on PlatformException catch (e) {
-      return _failure(e, 'Failed to pick files');
-    } catch (e) {
-      return PlatformFailed('Failed to pick files', error: e);
+    } on PlatformException catch (e, st) {
+      return _failure(e, st, 'Failed to pick files');
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to pick files', error: e, stackTrace: st);
     }
   }
 
@@ -145,34 +151,30 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
       if (xFile == null) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(_assetFromXFile(xFile));
-    } on PlatformException catch (e) {
-      return _failure(e, 'Failed to pick image');
-    } catch (e) {
-      return PlatformFailed('Failed to pick image', error: e);
+      return PlatformSupported(pickedAssetFromXFile(xFile));
+    } on PlatformException catch (e, st) {
+      return _failure(e, st, 'Failed to pick image');
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to pick image', error: e, stackTrace: st);
     }
-  }
-
-  PickedAsset _assetFromXFile(XFile xFile) {
-    final path = xFile.path;
-    return PickedAsset.fromFile(
-      mimeType: xFile.mimeType ?? mimeTypeFromFileName(xFile.name),
-      fileName: xFile.name,
-      readBytesFromFile: () => File(path).readAsBytes(),
-      streamFromFile: () => File(path).openRead(),
-    );
   }
 
   /// Maps plugin permission errors (`camera_access_denied`,
   /// `photo_access_denied`, `read_external_storage_denied`, ...) to the
   /// typed variant; everything else stays a generic failure.
-  PlatformResult<T> _failure<T>(PlatformException e, String message) {
+  PlatformResult<T> _failure<T>(
+    PlatformException e,
+    StackTrace st,
+    String message,
+  ) {
     if (e.code.contains('denied') || e.code.contains('restricted')) {
       return PlatformPermissionDenied<T>(
         message: e.message ?? 'Permission denied',
         error: e,
+        stackTrace: st,
       );
     }
-    return PlatformFailed(message, error: e);
+    return PlatformFailed(message, error: e, stackTrace: st);
   }
 }

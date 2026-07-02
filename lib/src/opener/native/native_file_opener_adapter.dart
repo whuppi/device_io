@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 
+import 'package:device_io/src/_shared/native_fs.dart';
 import 'package:device_io/src/opener/file_opener_adapter.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
@@ -21,20 +21,22 @@ class NativeFileOpenerAdapter implements FileOpenerAdapter {
     String? mimeType,
   }) async {
     try {
-      // Staged like shared files: unique subdir under the OS cache dir,
-      // reclaimed by the OS — the viewer may hold the file open long
-      // after this call returns, so no eager cleanup.
-      final tempDir = await getTemporaryDirectory();
-      final stagingDir = await Directory(
-        '${tempDir.path}/device_io_open/'
-        '${DateTime.now().microsecondsSinceEpoch}',
-      ).create(recursive: true);
-      final file = File('${stagingDir.path}/$fileName');
-      await file.writeAsBytes(bytes, flush: true);
-
+      // Staged like shared files: the viewer may hold the file open long
+      // after this call returns, so no eager cleanup — the OS reclaims
+      // its cache directory.
+      final file = await stageFile(
+        purpose: 'open',
+        fileName: fileName,
+        write: (f) => f.writeAsBytes(bytes, flush: true),
+      );
       return openPath(filePath: file.path, mimeType: mimeType);
-    } catch (e) {
-      return PlatformFailed('Failed to open file', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow; // Programmer bugs crash loudly.
+      return PlatformFailed(
+        'Failed to open "$fileName"',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -64,8 +66,9 @@ class NativeFileOpenerAdapter implements FileOpenerAdapter {
           'File opening is not supported on this platform',
         ),
       };
-    } catch (e) {
-      return PlatformFailed('Failed to open file', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to open file', error: e, stackTrace: st);
     }
   }
 

@@ -75,4 +75,21 @@ void main() {
       );
     });
   });
+
+  group('package:mime fallback', () {
+    test('resolves formats outside the curated map', () {
+      expect(mimeTypeFromFileName('clip.mov'), 'video/quicktime');
+      expect(
+        mimeTypeFromFileName('song.m4a'),
+        isNot('application/octet-stream'),
+      );
+    });
+
+    test('extensionFromMimeType covers curated and full database', () {
+      expect(extensionFromMimeType('image/png'), 'png');
+      expect(extensionFromMimeType('video/quicktime'), 'mov');
+      expect(extensionFromMimeType('made/up'), 'bin');
+      expect(extensionFromMimeType('made/up', fallback: 'dat'), 'dat');
+    });
+  });
 }

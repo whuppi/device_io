@@ -54,18 +54,18 @@ void main() {
       });
     });
 
-    group('fromFile', () {
-      test('is lazy — closures not invoked until read', () async {
+    group('lazy', () {
+      test('closures not invoked until read', () async {
         var bytesReads = 0;
         var streamReads = 0;
-        final asset = PickedAsset.fromFile(
+        final asset = PickedAsset.lazy(
           mimeType: 'video/mp4',
           fileName: 'clip.mp4',
-          readBytesFromFile: () async {
+          readBytes: () async {
             bytesReads++;
             return bytes;
           },
-          streamFromFile: () {
+          readStream: () {
             streamReads++;
             return Stream.value(bytes);
           },
@@ -83,35 +83,35 @@ void main() {
         expect(streamReads, 1);
       });
 
-      test('readBytes delegates to the file closure', () async {
-        final asset = PickedAsset.fromFile(
+      test('readBytes delegates to the closure', () async {
+        final asset = PickedAsset.lazy(
           mimeType: 'application/pdf',
-          readBytesFromFile: () async => bytes,
-          streamFromFile: () => Stream.value(bytes),
+          readBytes: () async => bytes,
+          readStream: () => Stream.value(bytes),
         );
         expect(await asset.readBytes(), bytes);
       });
 
-      test('readStream delegates to the file closure', () async {
+      test('readStream delegates to the closure', () async {
         final chunks = [
           [1, 2],
           [3, 4],
           [5],
         ];
-        final asset = PickedAsset.fromFile(
+        final asset = PickedAsset.lazy(
           mimeType: 'application/pdf',
-          readBytesFromFile: () async => bytes,
-          streamFromFile: () => Stream.fromIterable(chunks),
+          readBytes: () async => bytes,
+          readStream: () => Stream.fromIterable(chunks),
         );
         final collected = await asset.readStream().toList();
         expect(collected, chunks);
       });
 
       test('read errors propagate to the caller', () {
-        final asset = PickedAsset.fromFile(
+        final asset = PickedAsset.lazy(
           mimeType: 'application/pdf',
-          readBytesFromFile: () async => throw StateError('gone'),
-          streamFromFile: () => Stream.error(StateError('gone')),
+          readBytes: () async => throw StateError('gone'),
+          readStream: () => Stream.error(StateError('gone')),
         );
         expect(asset.readBytes(), throwsStateError);
         expect(asset.readStream().drain<void>(), throwsStateError);

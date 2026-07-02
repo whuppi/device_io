@@ -20,6 +20,15 @@
 /// would be a pointless round-trip. The extension is authoritative because
 /// the write path is controlled.
 ///
+/// ## Curated maps vs full lookup
+///
+/// The const maps below are the CURATED set — the formats this package's
+/// category sets and consumers commonly branch on. The lookup functions
+/// ([mimeTypeFromFileName], [extensionFromMimeType]) consult the curated
+/// maps first and fall back to `package:mime`'s full database (~1000
+/// entries), so uncommon formats (`.mov`, `.avif`, `.m4a`, ...) still
+/// resolve correctly.
+///
 /// ## Adding new formats
 ///
 /// Add the MIME type and extension to [mimeToExtension]. The reverse mapping
@@ -28,10 +37,13 @@
 /// so that UI code picks the right icon without hardcoding.
 library;
 
-/// MIME type → file extension (without leading dot).
+import 'package:mime/mime.dart' as mime;
+
+/// MIME type → file extension (without leading dot) — the curated set.
 ///
 /// Use at write time to derive an on-disk extension from a picker or
-/// transport MIME type.
+/// transport MIME type. For full-database coverage use
+/// [extensionFromMimeType].
 const Map<String, String> mimeToExtension = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -79,14 +91,27 @@ final Map<String, String> extensionToMime = {
 
 /// Infer a MIME type from a filename's extension.
 ///
-/// Falls back to `application/octet-stream` for unknown extensions.
-/// Used by asset picker adapters as a fallback when the platform
-/// doesn't report a MIME type.
+/// Consults the curated [extensionToMime] map first, then `package:mime`'s
+/// full database. Falls back to `application/octet-stream` for unknown
+/// extensions. Used by asset picker adapters when the platform doesn't
+/// report a MIME type.
 String mimeTypeFromFileName(String fileName) {
   final dotIndex = fileName.lastIndexOf('.');
   if (dotIndex < 0) return 'application/octet-stream';
   final ext = fileName.substring(dotIndex + 1).toLowerCase();
-  return extensionToMime[ext] ?? 'application/octet-stream';
+  return extensionToMime[ext] ??
+      mime.lookupMimeType(fileName.toLowerCase()) ??
+      'application/octet-stream';
+}
+
+/// Derive a file extension (without leading dot) from a MIME type.
+///
+/// Consults the curated [mimeToExtension] map first, then `package:mime`'s
+/// full database. Returns [fallback] when the MIME type is unknown.
+String extensionFromMimeType(String mimeType, {String fallback = 'bin'}) {
+  return mimeToExtension[mimeType] ??
+      mime.extensionFromMime(mimeType) ??
+      fallback;
 }
 
 // ── Extension category sets (for UI icon selection) ──

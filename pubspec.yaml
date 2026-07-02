@@ -22,6 +22,8 @@ dependencies:
   path_provider: ^2.1.5    # Downloads directory
   web: ^1.1.0              # Web APIs (file input, share, blob)
   open_filex: ^4.6.0       # Open files in external apps
+  mime: ^2.0.0
+  cross_file: ^0.3.5+4
 
 dev_dependencies:
   flutter_lints: ^6.0.0

@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:device_io/src/_shared/native_fs.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
@@ -21,8 +21,9 @@ class NativeSharingAdapter implements SharingAdapter {
         ShareParams(text: text, subject: subject),
       );
       return _fromShareResult(result);
-    } catch (e) {
-      return PlatformFailed('Failed to share text', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow; // Programmer bugs crash loudly.
+      return PlatformFailed('Failed to share text', error: e, stackTrace: st);
     }
   }
 
@@ -67,17 +68,6 @@ class NativeSharingAdapter implements SharingAdapter {
     );
   }
 
-  /// Stages the content to a fresh temp file and shares it.
-  ///
-  /// Each share gets its own staging directory so concurrent shares of the
-  /// same fileName never collide, and the real fileName is preserved
-  /// (receiving apps display it).
-  ///
-  /// The staged file is deliberately NOT deleted after share() returns:
-  /// on Android the future resolves when the share sheet closes, but the
-  /// receiving app may read the content URI afterwards — deleting here
-  /// hands it a dead file. The staging dir lives under the OS cache
-  /// directory, which both Android and iOS reclaim automatically.
   Future<PlatformResult<void>> _shareStagedFile({
     required String fileName,
     required String? mimeType,
@@ -86,13 +76,11 @@ class NativeSharingAdapter implements SharingAdapter {
     required Future<void> Function(File file) writeTo,
   }) async {
     try {
-      final tempDir = await getTemporaryDirectory();
-      final stagingDir = await Directory(
-        '${tempDir.path}/device_io_share/'
-        '${DateTime.now().microsecondsSinceEpoch}',
-      ).create(recursive: true);
-      final tempFile = File('${stagingDir.path}/$fileName');
-      await writeTo(tempFile);
+      final tempFile = await stageFile(
+        purpose: 'share',
+        fileName: fileName,
+        write: writeTo,
+      );
 
       final result = await SharePlus.instance.share(
         ShareParams(
@@ -102,8 +90,13 @@ class NativeSharingAdapter implements SharingAdapter {
         ),
       );
       return _fromShareResult(result);
-    } catch (e) {
-      return PlatformFailed('Failed to share file', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed(
+        'Failed to share "$fileName"',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

@@ -66,12 +66,18 @@ sealed class PlatformResult<T> {
       PlatformSupported(:final value) => PlatformSupported(transform(value)),
       PlatformCancelled() => PlatformCancelled<U>(),
       PlatformUnsupported(:final reason) => PlatformUnsupported(reason),
-      PlatformPermissionDenied(:final message, :final error) =>
-        PlatformPermissionDenied<U>(message: message, error: error),
-      PlatformFailed(:final message, :final error) => PlatformFailed(
-        message,
-        error: error,
-      ),
+      PlatformPermissionDenied(
+        :final message,
+        :final error,
+        :final stackTrace,
+      ) =>
+        PlatformPermissionDenied<U>(
+          message: message,
+          error: error,
+          stackTrace: stackTrace,
+        ),
+      PlatformFailed(:final message, :final error, :final stackTrace) =>
+        PlatformFailed(message, error: error, stackTrace: stackTrace),
     };
   }
 }
@@ -116,14 +122,19 @@ final class PlatformUnsupported<T> extends PlatformResult<T> {
 /// [PlatformPermissionDenied]. A plain `case PlatformFailed()` arm
 /// matches the subtypes too, so generic handling stays a single arm.
 class PlatformFailed<T> extends PlatformResult<T> {
-  /// Creates a failure result with a [message] and optional [error] cause.
-  const PlatformFailed(this.message, {this.error});
+  /// Creates a failure result with a [message], and the caught [error]
+  /// plus its [stackTrace] when available.
+  const PlatformFailed(this.message, {this.error, this.stackTrace});
 
-  /// Human-readable description of the failure.
+  /// Human-readable description of the failure (diagnostic, not localized —
+  /// apps translate for their users).
   final String message;
 
   /// The underlying error, when one was caught.
   final Object? error;
+
+  /// The stack trace captured with [error], for diagnostics and reporting.
+  final StackTrace? stackTrace;
 
   @override
   String toString() => 'PlatformFailed($message)';
@@ -138,7 +149,8 @@ final class PlatformPermissionDenied<T> extends PlatformFailed<T> {
   const PlatformPermissionDenied({
     String message = 'Permission denied',
     Object? error,
-  }) : super(message, error: error);
+    StackTrace? stackTrace,
+  }) : super(message, error: error, stackTrace: stackTrace);
 
   @override
   String toString() => 'PlatformPermissionDenied($message)';

@@ -180,4 +180,99 @@ void main() {
       );
     });
   });
+
+  group('audit fixes', () {
+    test(
+      'path traversal in fileName cannot escape the downloads dir',
+      () async {
+        final adapter = NativeDownloadAdapter();
+        final result = await adapter.saveToDevice(
+          bytes: bytes,
+          fileName: '../../escape.txt',
+        );
+
+        final path = (result as PlatformSupported<String?>).value!;
+        expect(path, startsWith(tempDir.path));
+        expect(
+          await File('${tempDir.path}/../../escape.txt').exists(),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'creates the downloads dir when it does not exist (iOS case)',
+      () async {
+        PathProviderPlatform.instance = _FakePathProvider(
+          downloadsPath: '${tempDir.path}/not-yet-created/Downloads',
+          documentsPath: tempDir.path,
+        );
+
+        final adapter = NativeDownloadAdapter();
+        final result = await adapter.saveToDevice(
+          bytes: bytes,
+          fileName: 'export.csv',
+        );
+
+        expect(result, isA<PlatformSupported<String?>>());
+        final path = (result as PlatformSupported<String?>).value!;
+        expect(await File(path).readAsBytes(), bytes);
+      },
+    );
+
+    test('concurrent saves of the same name produce distinct files', () async {
+      final adapter = NativeDownloadAdapter();
+      final results = await Future.wait(
+        List.generate(
+          6,
+          (_) => adapter.saveToDevice(bytes: bytes, fileName: 'same.bin'),
+        ),
+      );
+
+      final paths = results
+          .map((r) => (r as PlatformSupported<String?>).value!)
+          .toSet();
+      expect(paths.length, 6);
+    });
+
+    test('a failed stream save leaves nothing behind', () async {
+      final adapter = NativeDownloadAdapter();
+      final result = await adapter.saveStreamToDevice(
+        byteStream: () async* {
+          yield <int>[1, 2, 3];
+          throw const FileSystemException('disk pulled');
+        }(),
+        fileName: 'big.bin',
+      );
+
+      expect(result, isA<PlatformFailed<String?>>());
+      final leftovers = tempDir
+          .listSync()
+          .map((e) => e.uri.pathSegments.last)
+          .toList();
+      expect(
+        leftovers,
+        isEmpty,
+        reason: 'no final file, no .part file: $leftovers',
+      );
+    });
+
+    test('failures carry the stack trace', () async {
+      PathProviderPlatform.instance = _FakePathProvider(
+        // A file where the directory should be forces a failure.
+        downloadsPath: (await File('${tempDir.path}/blocker').create()).path,
+        documentsPath: tempDir.path,
+      );
+
+      final adapter = NativeDownloadAdapter(appSubfolder: 'Sub');
+      final result = await adapter.saveToDevice(
+        bytes: bytes,
+        fileName: 'x.txt',
+      );
+
+      final failed = result as PlatformFailed<String?>;
+      expect(failed.error, isNotNull);
+      expect(failed.stackTrace, isNotNull);
+    });
+  });
 }

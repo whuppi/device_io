@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-import 'package:device_io/src/types/platform_result.dart';
 import 'package:device_io/src/download/download_adapter.dart';
+import 'package:device_io/src/types/platform_result.dart';
 
 /// Web download adapter using blob URL + anchor click.
 ///
@@ -20,8 +21,13 @@ class WebDownloadAdapter implements DownloadAdapter {
     try {
       _triggerDownload(bytes, fileName, mimeType);
       return const PlatformSupported(null); // No file path on web.
-    } catch (e) {
-      return PlatformFailed('Failed to trigger download', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow; // Programmer bugs crash loudly.
+      return PlatformFailed(
+        'Failed to trigger download',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -41,9 +47,25 @@ class WebDownloadAdapter implements DownloadAdapter {
       }
       _triggerDownload(builder.takeBytes(), fileName, mimeType);
       return const PlatformSupported(null);
-    } catch (e) {
-      return PlatformFailed('Failed to trigger download', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed(
+        'Failed to trigger download',
+        error: e,
+        stackTrace: st,
+      );
     }
+  }
+
+  @override
+  Future<PlatformResult<String?>> saveAs({
+    required Uint8List bytes,
+    required String fileName,
+    String? dialogTitle,
+  }) {
+    // Browsers offer no save dialog to web pages — a download IS the
+    // user-visible save on this platform.
+    return saveToDevice(bytes: bytes, fileName: fileName);
   }
 
   void _triggerDownload(Uint8List bytes, String fileName, String? mimeType) {
@@ -60,9 +82,16 @@ class WebDownloadAdapter implements DownloadAdapter {
 
     web.document.body!.appendChild(anchor);
     anchor.click();
-
-    // Clean up.
     web.document.body!.removeChild(anchor);
-    web.URL.revokeObjectURL(url);
+
+    // Revoking synchronously after click is racy on some browsers for
+    // large blobs (the download may not have opened the URL yet). Deferred
+    // revoke; page unload frees the blob regardless.
+    unawaited(
+      Future<void>.delayed(
+        const Duration(minutes: 1),
+        () => web.URL.revokeObjectURL(url),
+      ),
+    );
   }
 }

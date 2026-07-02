@@ -8,7 +8,9 @@
 /// import 'package:device_io/device_io.dart';
 ///
 /// // Initialize (once, at app startup):
-/// final deviceIO = await initDeviceIO(downloadSubfolder: 'MyApp');
+/// final deviceIO = await initDeviceIO(
+///   config: DeviceIOConfig(downloadSubfolder: 'MyApp'),
+/// );
 ///
 /// // Pick an image:
 /// final result = await deviceIO.assetPicker.pickImage();
@@ -33,6 +35,7 @@ library;
 // ── The container + platform-resolved factory ────────────────────────
 export 'src/runtime/device_io.dart' show DeviceIO;
 export 'src/runtime/init_device_io.dart' show initDeviceIO;
+export 'src/types/device_io_config.dart' show DeviceIOConfig;
 
 // ── Capability contracts ─────────────────────────────────────────────
 export 'src/download/download_adapter.dart' show DownloadAdapter;

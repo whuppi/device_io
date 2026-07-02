@@ -44,8 +44,13 @@ class WebFileOpenerAdapter implements FileOpenerAdapter {
         ),
       );
       return const PlatformSupported(null);
-    } catch (e) {
-      return PlatformFailed('Failed to open file', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow; // Programmer bugs crash loudly.
+      return PlatformFailed(
+        'Failed to open "$fileName"',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

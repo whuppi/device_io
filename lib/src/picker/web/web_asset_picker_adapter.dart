@@ -3,10 +3,15 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:device_io/src/picker/asset_picker_adapter.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
+import 'package:device_io/src/picker/xfile_picked_asset.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Web asset picker using image_picker + file_picker (HTML file input).
+///
+/// Image picks are lazy — the XFile wraps a browser blob that is read on
+/// demand. Generic file picks are eager (`withData`): the file picker
+/// plugin hands over bytes, not a blob reference.
 class WebAssetPickerAdapter implements AssetPickerAdapter {
   final _picker = ImagePicker();
 
@@ -30,9 +35,10 @@ class WebAssetPickerAdapter implements AssetPickerAdapter {
       if (xFile == null) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(await _assetFromXFile(xFile));
-    } catch (e) {
-      return PlatformFailed('Failed to pick image', error: e);
+      return PlatformSupported(pickedAssetFromXFile(xFile));
+    } catch (e, st) {
+      if (e is Error) rethrow; // Programmer bugs crash loudly.
+      return PlatformFailed('Failed to pick image', error: e, stackTrace: st);
     }
   }
 
@@ -54,13 +60,10 @@ class WebAssetPickerAdapter implements AssetPickerAdapter {
       if (xFiles.isEmpty) {
         return const PlatformCancelled();
       }
-      final assets = <PickedAsset>[];
-      for (final xFile in xFiles) {
-        assets.add(await _assetFromXFile(xFile));
-      }
-      return PlatformSupported(assets);
-    } catch (e) {
-      return PlatformFailed('Failed to pick images', error: e);
+      return PlatformSupported(xFiles.map(pickedAssetFromXFile).toList());
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to pick images', error: e, stackTrace: st);
     }
   }
 
@@ -90,7 +93,7 @@ class WebAssetPickerAdapter implements AssetPickerAdapter {
         type: allowedExtensions != null ? FileType.custom : FileType.any,
         allowedExtensions: allowedExtensions,
         allowMultiple: true,
-        withData: true, // Required on web — no file path access.
+        withData: true, // Web file picks have no lazy handle — see class doc.
       );
 
       if (result == null || result.files.isEmpty) {
@@ -112,18 +115,9 @@ class WebAssetPickerAdapter implements AssetPickerAdapter {
         );
       }
       return PlatformSupported(assets);
-    } catch (e) {
-      return PlatformFailed('Failed to pick files', error: e);
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to pick files', error: e, stackTrace: st);
     }
-  }
-
-  Future<PickedAsset> _assetFromXFile(XFile xFile) async {
-    // Web pickers load eagerly — the browser hands over the bytes directly.
-    final bytes = await xFile.readAsBytes();
-    return PickedAsset.fromBytes(
-      bytes: bytes,
-      mimeType: xFile.mimeType ?? mimeTypeFromFileName(xFile.name),
-      fileName: xFile.name,
-    );
   }
 }
