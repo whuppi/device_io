@@ -89,12 +89,18 @@ One thing to check: `device_io` depends on `share_plus` 12, which sets Android b
 
 ### macOS
 
-The system dialogs (`saveAs`, file picking) write to locations the user chooses, which the App Sandbox gates behind one entitlement. Add it to **both** `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`:
+The App Sandbox gates file access behind entitlements. Add these to **both** `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`:
 
 ```xml
+<!-- saveAs + file picking — locations the user chooses in a dialog -->
 <key>com.apple.security.files.user-selected.read-write</key>
 <true/>
+<!-- silent saveToDevice into the real Downloads folder -->
+<key>com.apple.security.files.downloads.read-write</key>
+<true/>
 ```
+
+Skip the Downloads entitlement if you only ever use `saveAs`; a silent `saveToDevice` returns `PlatformFailed` without it.
 
 ### Linux, Windows, Web
 
