@@ -16,17 +16,22 @@ import 'package:device_io/src/types/platform_result.dart';
 // The underlying plugins are already federated across all platforms and
 // this file touches neither dart:io nor package:web, so a per-platform
 // pair here would be a fake matrix: two near-identical copies diverging
-// only where flagged with kIsWeb below (camera capture, and web file
-// picks having no lazy handle). The other capabilities keep their
-// native/web adapter pairs because they genuinely bind platform APIs.
+// only where flagged with kIsWeb below (web file picks having no lazy
+// handle). The other capabilities keep their native/web adapter pairs
+// because they genuinely bind platform APIs.
 class PluginAssetPickerAdapter implements AssetPickerAdapter {
   final _picker = ImagePicker();
 
+  /// Camera capture works wherever the device is a phone/tablet — native
+  /// apps AND mobile browsers (image_picker's web implementation sets the
+  /// input `capture` attribute, which opens the camera there). On web,
+  /// [defaultTargetPlatform] reports the underlying OS, so this needs no
+  /// kIsWeb branch. Desktop is false: the desktop implementations throw
+  /// unless a camera delegate is wired, which this package doesn't do.
   @override
   bool get isCameraSupported =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.android);
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.android;
 
   @override
   Future<PlatformResult<PickedAsset>> pickImage({
@@ -77,7 +82,8 @@ class PluginAssetPickerAdapter implements AssetPickerAdapter {
   }) async {
     if (!isCameraSupported) {
       return const PlatformUnsupported(
-        'Camera capture is not available on this platform',
+        'Camera capture is not available on this platform '
+        '(desktop has no camera integration)',
       );
     }
     return _pickFromSource(

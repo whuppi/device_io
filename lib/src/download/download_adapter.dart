@@ -61,11 +61,12 @@ abstract interface class DownloadAdapter {
   ///   public storage (Downloads, Drive, …) with no permissions needed.
   /// - **iOS**: the Files export dialog.
   /// - **Desktop**: the native save dialog.
-  /// - **Web**: a plain browser download (browsers have no save dialog to
-  ///   offer; the returned path is null).
+  /// - **Web**: a real save dialog on browsers with the File System Access
+  ///   API (Chromium — returns the chosen file name); elsewhere a plain
+  ///   browser download (returns null).
   ///
   /// Returns [PlatformCancelled] when the user dismisses the dialog.
-  /// Returns the chosen path (platform-dependent form; null on web).
+  /// Returns the chosen location (platform-dependent form).
   Future<PlatformResult<String?>> saveAs({
     required Uint8List bytes,
     required String fileName,

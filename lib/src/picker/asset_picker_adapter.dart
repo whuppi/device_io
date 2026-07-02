@@ -35,7 +35,9 @@ abstract interface class AssetPickerAdapter {
 
   /// Capture an image from the camera.
   ///
-  /// Returns [PlatformUnsupported] on platforms without camera access (web).
+  /// Available on phones/tablets — native apps AND mobile browsers.
+  /// Returns [PlatformUnsupported] on desktop, where no camera
+  /// integration exists.
   Future<PlatformResult<PickedAsset>> captureImage({
     int? maxWidth,
     int? maxHeight,
