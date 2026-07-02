@@ -160,15 +160,24 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
     }
   }
 
-  /// Maps plugin permission errors (`camera_access_denied`,
-  /// `photo_access_denied`, `read_external_storage_denied`, ...) to the
-  /// typed variant; everything else stays a generic failure.
+  /// The exact permission error codes image_picker's platform
+  /// implementations raise (verified against the iOS and Android plugin
+  /// sources — file_picker's SAF pickers need no permissions and define
+  /// none). Exact matching keeps this an explicit contract: an unknown
+  /// code stays a generic failure instead of being guessed at.
+  static const _permissionCodes = {
+    'camera_access_denied',
+    'camera_access_restricted',
+    'photo_access_denied',
+    'photo_access_restricted',
+  };
+
   PlatformResult<T> _failure<T>(
     PlatformException e,
     StackTrace st,
     String message,
   ) {
-    if (e.code.contains('denied') || e.code.contains('restricted')) {
+    if (_permissionCodes.contains(e.code)) {
       return PlatformPermissionDenied<T>(
         message: e.message ?? 'Permission denied',
         error: e,

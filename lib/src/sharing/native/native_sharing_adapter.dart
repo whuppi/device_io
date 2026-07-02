@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'package:device_io/src/_shared/native_fs.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
+import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Native (mobile/desktop) sharing via share_plus.
@@ -84,7 +85,12 @@ class NativeSharingAdapter implements SharingAdapter {
 
       final result = await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(tempFile.path, mimeType: mimeType)],
+          files: [
+            XFile(
+              tempFile.path,
+              mimeType: mimeType ?? mimeTypeFromFileName(fileName),
+            ),
+          ],
           subject: subject,
           text: text,
         ),

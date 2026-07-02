@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 
 import 'package:device_io/src/sharing/sharing_adapter.dart';
+import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Web sharing via the Web Share API.
@@ -49,14 +50,12 @@ class WebSharingAdapter implements SharingAdapter {
       );
     }
     try {
-      final blob = web.Blob(
-        [bytes.toJS].toJS,
-        web.BlobPropertyBag(type: mimeType ?? 'application/octet-stream'),
-      );
+      final type = mimeType ?? mimeTypeFromFileName(fileName);
+      final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: type));
       final file = web.File(
         [blob].toJS,
         fileName,
-        web.FilePropertyBag(type: mimeType ?? 'application/octet-stream'),
+        web.FilePropertyBag(type: type),
       );
 
       final data = web.ShareData(files: [file].toJS);

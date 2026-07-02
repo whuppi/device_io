@@ -6,6 +6,12 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
+// Hoisted so sanitizeFileName doesn't recompile its patterns per call.
+final _unsafeChars = RegExp(r'[/\\<>:"|?*]');
+final _controlChars = RegExp(r'[\x00-\x1F\x7F]');
+final _trailingDots = RegExp(r'\.+$');
+final _onlyDots = RegExp(r'^\.+$');
+
 /// Makes a caller-supplied file name safe to interpolate into a filesystem
 /// path.
 ///
@@ -22,11 +28,11 @@ import 'package:path_provider/path_provider.dart';
 /// - Overlong names are truncated to 200 chars, keeping the extension.
 String sanitizeFileName(String fileName) {
   var name = fileName
-      .replaceAll(RegExp(r'[/\\<>:"|?*]'), '_')
-      .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
+      .replaceAll(_unsafeChars, '_')
+      .replaceAll(_controlChars, '')
       .trim();
-  name = name.replaceAll(RegExp(r'\.+$'), '');
-  if (name.isEmpty || RegExp(r'^\.+$').hasMatch(name)) {
+  name = name.replaceAll(_trailingDots, '');
+  if (name.isEmpty || _onlyDots.hasMatch(name)) {
     return 'file';
   }
   if (name.length > 200) {
@@ -58,23 +64,27 @@ Future<File> reserveFreshFile(Directory dir, String fileName) async {
   final ext = dot > 0 ? fileName.substring(dot) : '';
 
   var candidate = File('${dir.path}/$fileName');
-  var counter = 1;
-  while (true) {
+  for (var counter = 1; counter <= 1000; counter++) {
     try {
       return await candidate.create(exclusive: true);
     } on PathExistsException {
       candidate = File('${dir.path}/$stem ($counter)$ext');
-      counter++;
     }
   }
+  // A thousand same-named files means numbering has stopped being useful —
+  // a timestamped name keeps the save working instead of looping forever.
+  return File(
+    '${dir.path}/$stem (${DateTime.now().microsecondsSinceEpoch})$ext',
+  ).create(exclusive: true);
 }
 
 /// Creates a unique staging directory under the OS cache dir and writes
 /// [fileName] into it via [write]. Returns the staged file.
 ///
-/// Every call gets its own directory so concurrent stagings of the same
-/// fileName never collide while the real fileName is preserved (share
-/// sheets and viewers display it).
+/// Every call gets its own directory (atomic `createTemp`, no
+/// timestamp-collision window) so concurrent stagings of the same fileName
+/// never collide while the real fileName is preserved (share sheets and
+/// viewers display it).
 ///
 /// Staged files are deliberately NOT deleted afterwards: share targets and
 /// viewers may read them long after the triggering call returns. The OS
@@ -85,10 +95,10 @@ Future<File> stageFile({
   required Future<void> Function(File file) write,
 }) async {
   final tempDir = await getTemporaryDirectory();
-  final stagingDir = await Directory(
-    '${tempDir.path}/device_io_$purpose/'
-    '${DateTime.now().microsecondsSinceEpoch}',
+  final root = await Directory(
+    '${tempDir.path}/device_io_$purpose',
   ).create(recursive: true);
+  final stagingDir = await root.createTemp();
   final file = File('${stagingDir.path}/${sanitizeFileName(fileName)}');
   await write(file);
   return file;

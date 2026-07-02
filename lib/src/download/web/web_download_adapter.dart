@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 
 import 'package:device_io/src/download/download_adapter.dart';
+import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Web download adapter using blob URL + anchor click.
@@ -71,7 +72,7 @@ class WebDownloadAdapter implements DownloadAdapter {
   void _triggerDownload(Uint8List bytes, String fileName, String? mimeType) {
     final blob = web.Blob(
       [bytes.toJS].toJS,
-      web.BlobPropertyBag(type: mimeType ?? 'application/octet-stream'),
+      web.BlobPropertyBag(type: mimeType ?? mimeTypeFromFileName(fileName)),
     );
     final url = web.URL.createObjectURL(blob);
 
