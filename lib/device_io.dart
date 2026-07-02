@@ -41,6 +41,7 @@ export 'src/types/device_io_config.dart' show DeviceIOConfig;
 export 'src/download/download_adapter.dart' show DownloadAdapter;
 export 'src/opener/file_opener_adapter.dart' show FileOpenerAdapter;
 export 'src/picker/asset_picker_adapter.dart' show AssetPickerAdapter;
+export 'src/sharing/share_file.dart' show ShareFile;
 export 'src/sharing/sharing_adapter.dart' show SharingAdapter;
 
 // ── Results — sealed; pattern-match on the variants ──────────────────

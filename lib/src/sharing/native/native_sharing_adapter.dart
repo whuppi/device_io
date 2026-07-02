@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' show Rect;
 
 // The platform INTERFACE, not package:share_plus/share_plus.dart — the
 // plugin's barrel unconditionally exports its Linux and Windows impls,
@@ -13,6 +14,7 @@ import 'dart:typed_data';
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 
 import 'package:device_io/src/_shared/native_fs.dart';
+import 'package:device_io/src/sharing/share_file.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
@@ -25,10 +27,15 @@ final class NativeSharingAdapter implements SharingAdapter {
   Future<PlatformResult<void>> shareText({
     required String text,
     String? subject,
+    Rect? sharePositionOrigin,
   }) async {
     try {
       final result = await SharePlatform.instance.share(
-        ShareParams(text: text, subject: subject),
+        ShareParams(
+          text: text,
+          subject: subject,
+          sharePositionOrigin: sharePositionOrigin,
+        ),
       );
       return _fromShareResult(result);
     } catch (e, st) {
@@ -44,14 +51,65 @@ final class NativeSharingAdapter implements SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
+    Rect? sharePositionOrigin,
   }) {
     return _shareStagedFile(
       fileName: fileName,
       mimeType: mimeType,
       subject: subject,
       text: text,
+      sharePositionOrigin: sharePositionOrigin,
       writeTo: (file) => file.writeAsBytes(bytes, flush: true),
     );
+  }
+
+  @override
+  Future<PlatformResult<void>> shareFiles({
+    required List<ShareFile> files,
+    String? subject,
+    String? text,
+    Rect? sharePositionOrigin,
+  }) async {
+    if (files.isEmpty) {
+      throw ArgumentError.value(files, 'files', 'must not be empty');
+    }
+    try {
+      final staged = await stageFiles(
+        purpose: 'share',
+        entries: [
+          for (final f in files)
+            (
+              fileName: f.fileName,
+              write: (File file) => file.writeAsBytes(f.bytes, flush: true),
+            ),
+        ],
+      );
+
+      final result = await SharePlatform.instance.share(
+        ShareParams(
+          files: [
+            for (var i = 0; i < staged.length; i++)
+              XFile(
+                staged[i].path,
+                mimeType:
+                    files[i].mimeType ??
+                    mimeTypeFromFileName(files[i].fileName),
+              ),
+          ],
+          subject: subject,
+          text: text,
+          sharePositionOrigin: sharePositionOrigin,
+        ),
+      );
+      return _fromShareResult(result);
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed(
+        'Failed to share ${files.length} files',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   @override
@@ -61,12 +119,14 @@ final class NativeSharingAdapter implements SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
+    Rect? sharePositionOrigin,
   }) {
     return _shareStagedFile(
       fileName: fileName,
       mimeType: mimeType,
       subject: subject,
       text: text,
+      sharePositionOrigin: sharePositionOrigin,
       writeTo: (file) async {
         final sink = file.openWrite();
         try {
@@ -83,6 +143,7 @@ final class NativeSharingAdapter implements SharingAdapter {
     required String? mimeType,
     required String? subject,
     required String? text,
+    required Rect? sharePositionOrigin,
     required Future<void> Function(File file) writeTo,
   }) async {
     try {
@@ -102,6 +163,7 @@ final class NativeSharingAdapter implements SharingAdapter {
           ],
           subject: subject,
           text: text,
+          sharePositionOrigin: sharePositionOrigin,
         ),
       );
       return _fromShareResult(result);

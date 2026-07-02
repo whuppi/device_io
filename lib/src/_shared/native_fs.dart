@@ -118,3 +118,52 @@ Future<File> stageFile({
   await write(file);
   return file;
 }
+
+/// Stages several named files into ONE fresh staging directory and returns
+/// them in the given order.
+///
+/// Each entry's name is sanitized; when two entries sanitize to the same
+/// name the later ones are numbered (`report (1).pdf`) so nothing is
+/// overwritten. Numbering is resolved in memory against the names already
+/// claimed in this call — one brand-new `createTemp` directory has no
+/// pre-existing files, so there is no filesystem race to guard against.
+///
+/// Same staging lifecycle as [stageFile]: every call gets its own directory
+/// and the files are deliberately NOT deleted, so share targets can read
+/// them after the call returns.
+Future<List<File>> stageFiles({
+  required String purpose,
+  required List<({String fileName, Future<void> Function(File file) write})>
+  entries,
+}) async {
+  final tempDir = await getTemporaryDirectory();
+  final root = await Directory(
+    '${tempDir.path}/device_io_$purpose',
+  ).create(recursive: true);
+  final stagingDir = await root.createTemp();
+
+  final claimed = <String>{};
+  final files = <File>[];
+  for (final entry in entries) {
+    final name = _uniqueName(sanitizeFileName(entry.fileName), claimed);
+    final file = File('${stagingDir.path}/$name');
+    await entry.write(file);
+    files.add(file);
+  }
+  return files;
+}
+
+/// Returns [name] if unclaimed, otherwise a numbered variant
+/// (`report (1).pdf`) that is not yet in [claimed]. Records the result in
+/// [claimed] before returning.
+String _uniqueName(String name, Set<String> claimed) {
+  if (claimed.add(name)) return name;
+
+  final dot = name.lastIndexOf('.');
+  final stem = dot > 0 ? name.substring(0, dot) : name;
+  final ext = dot > 0 ? name.substring(dot) : '';
+  for (var counter = 1; ; counter++) {
+    final candidate = '$stem ($counter)$ext';
+    if (claimed.add(candidate)) return candidate;
+  }
+}
