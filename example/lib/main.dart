@@ -141,6 +141,36 @@ class _HomePageState extends State<HomePage> {
     _recordAsset(result, action: 'Capture image');
   }
 
+  Future<void> _pickVideo() async {
+    final result = await _io.assetPicker.pickVideo();
+    _absorbOne(result);
+    _recordAsset(result, action: 'Pick video');
+  }
+
+  Future<void> _captureVideo() async {
+    final result = await _io.assetPicker.captureVideo(
+      maxDuration: const Duration(seconds: 30),
+    );
+    _absorbOne(result);
+    _recordAsset(result, action: 'Capture video');
+  }
+
+  Future<void> _pickMedia() async {
+    final result = await _io.assetPicker.pickMedia();
+    _absorbOne(result);
+    _recordAsset(result, action: 'Pick media');
+  }
+
+  Future<void> _pickMultipleMedia() async {
+    final result = await _io.assetPicker.pickMultipleMedia(limit: 5);
+    _absorbMany(result);
+    _record(
+      'Pick multiple media',
+      result,
+      describe: (assets) => '${assets.length} selected',
+    );
+  }
+
   Future<void> _pickFile() async {
     final result = await _io.assetPicker.pickFile();
     _absorbOne(result);
@@ -212,6 +242,29 @@ class _HomePageState extends State<HomePage> {
     _record<void>('Share file', result);
   }
 
+  Future<void> _shareFiles() async {
+    // sharePositionOrigin omitted: it's the iPadOS popover anchor and null is
+    // valid on every other platform. A real app anchors it to the tapped
+    // button's global rect on iPad.
+    final result = await _io.sharing.shareFiles(
+      files: [
+        ShareFile(
+          bytes: _utf8('name,role\nAlice,admin\nBob,user\n'),
+          fileName: 'people.csv',
+          mimeType: 'text/csv',
+        ),
+        ShareFile(
+          bytes: _utf8('Two files, one share sheet.\n'),
+          fileName: 'note.txt',
+          mimeType: 'text/plain',
+        ),
+      ],
+      subject: 'device_io',
+      text: 'A CSV and a text file together',
+    );
+    _record<void>('Share files (CSV + text)', result);
+  }
+
   Future<void> _shareFileStream() async {
     final result = await _io.sharing.shareFileStream(
       byteStream: _patternedStream(1024 * 1024),
@@ -250,9 +303,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _saveAs() async {
     final result = await _io.download.saveAs(
-      bytes: _utf8('Pick where this lands.\n'),
-      fileName: 'export.txt',
+      bytes: _utf8('id,value\n1,Pick where this lands\n'),
+      fileName: 'export.csv',
       dialogTitle: 'Save example export',
+      mimeType: 'text/csv',
     );
     _record('Save as…', result, describe: _describePath);
   }
@@ -335,6 +389,26 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         FilledButton.tonal(
+                          onPressed: _pickVideo,
+                          child: const Text('pickVideo'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: cameraSupported ? _captureVideo : null,
+                          child: Text(
+                            cameraSupported
+                                ? 'captureVideo'
+                                : 'captureVideo (no camera)',
+                          ),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: _pickMedia,
+                          child: const Text('pickMedia'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: _pickMultipleMedia,
+                          child: const Text('pickMultipleMedia'),
+                        ),
+                        FilledButton.tonal(
                           onPressed: _pickFile,
                           child: const Text('pickFile'),
                         ),
@@ -369,6 +443,10 @@ class _HomePageState extends State<HomePage> {
                         FilledButton.tonal(
                           onPressed: _shareFile,
                           child: const Text('shareFile'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: _shareFiles,
+                          child: const Text('shareFiles (CSV + text)'),
                         ),
                         FilledButton.tonal(
                           onPressed: _shareFileStream,
