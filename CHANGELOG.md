@@ -88,4 +88,4 @@ save, open. One API on iOS, Android, macOS, Windows, Linux, and web.
   just-saved files.
 - **Platforms:** pub.dev attributes all six platforms; the stub-default
   conditional import and the registration-only dependency pattern are
-  guarded by a pana gate in CI.
+  guarded by the pana platform gate (`make platforms`).
