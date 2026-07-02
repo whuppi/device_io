@@ -1,53 +1,102 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
-import 'package:device_io/src/types/platform_result.dart';
 import 'package:device_io/src/opener/file_opener_adapter.dart';
+import 'package:device_io/src/types/platform_result.dart';
 
-/// Native (desktop/mobile) file opener using OS default app.
+/// Native (mobile/desktop) file opener using the OS default app.
 ///
-/// Uses the platform's standard "open" command:
-/// - macOS: `open <path>`
-/// - Linux: `xdg-open <path>`
-/// - Windows: `start "" <path>`
-/// - iOS/Android: not yet implemented (needs url_launcher with file:// URI)
+/// - macOS: `open <path>` · Linux: `xdg-open <path>` · Windows: `start`
+/// - iOS/Android: open_filex (content-URI aware, permission mapped)
 class NativeFileOpenerAdapter implements FileOpenerAdapter {
   @override
-  Future<PlatformResult<void>> openFile({
+  Future<PlatformResult<void>> openBytes({
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    try {
+      // Staged like shared files: unique subdir under the OS cache dir,
+      // reclaimed by the OS — the viewer may hold the file open long
+      // after this call returns, so no eager cleanup.
+      final tempDir = await getTemporaryDirectory();
+      final stagingDir = await Directory(
+        '${tempDir.path}/device_io_open/'
+        '${DateTime.now().microsecondsSinceEpoch}',
+      ).create(recursive: true);
+      final file = File('${stagingDir.path}/$fileName');
+      await file.writeAsBytes(bytes, flush: true);
+
+      return openPath(filePath: file.path, mimeType: mimeType);
+    } catch (e) {
+      return PlatformFailed('Failed to open file', error: e);
+    }
+  }
+
+  @override
+  Future<PlatformResult<void>> openPath({
     required String filePath,
     String? mimeType,
   }) async {
     try {
       final file = File(filePath);
-      if (!file.existsSync()) {
+      if (!await file.exists()) {
         return PlatformFailed('File not found: $filePath');
       }
 
-      final (command, args) = switch (defaultTargetPlatform) {
-        TargetPlatform.macOS => ('open', [filePath]),
-        TargetPlatform.linux => ('xdg-open', [filePath]),
-        TargetPlatform.windows => ('cmd', ['/c', 'start', '', filePath]),
-        _ => (null, <String>[]),
+      return switch (defaultTargetPlatform) {
+        TargetPlatform.iOS ||
+        TargetPlatform.android => _openMobile(filePath, mimeType),
+        TargetPlatform.macOS => _openDesktop('open', [filePath]),
+        TargetPlatform.linux => _openDesktop('xdg-open', [filePath]),
+        TargetPlatform.windows => _openDesktop('cmd', [
+          '/c',
+          'start',
+          '',
+          filePath,
+        ]),
+        TargetPlatform.fuchsia => const PlatformUnsupported(
+          'File opening is not supported on this platform',
+        ),
       };
-
-      if (command == null) {
-        return const PlatformUnsupported(
-          'File opening is not yet supported on this platform',
-        );
-      }
-
-      final result = await Process.run(command, args);
-      if (result.exitCode != 0) {
-        return PlatformFailed(
-          'Failed to open file (exit code ${result.exitCode})',
-        );
-      }
-
-      return const PlatformSupported(null);
     } catch (e) {
       return PlatformFailed('Failed to open file', error: e);
     }
+  }
+
+  Future<PlatformResult<void>> _openMobile(
+    String filePath,
+    String? mimeType,
+  ) async {
+    final result = await OpenFilex.open(filePath, type: mimeType);
+    return switch (result.type) {
+      ResultType.done => const PlatformSupported(null),
+      ResultType.fileNotFound => PlatformFailed('File not found: $filePath'),
+      ResultType.noAppToOpen => const PlatformFailed(
+        'No app available to open this file type',
+      ),
+      ResultType.permissionDenied => PlatformPermissionDenied(
+        message: result.message,
+      ),
+      ResultType.error => PlatformFailed(result.message),
+    };
+  }
+
+  Future<PlatformResult<void>> _openDesktop(
+    String command,
+    List<String> args,
+  ) async {
+    final result = await Process.run(command, args);
+    if (result.exitCode != 0) {
+      return PlatformFailed(
+        'Failed to open file (exit code ${result.exitCode})',
+      );
+    }
+    return const PlatformSupported(null);
   }
 }

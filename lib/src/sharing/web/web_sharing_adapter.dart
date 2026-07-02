@@ -3,12 +3,13 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-import 'package:device_io/src/types/platform_result.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
+import 'package:device_io/src/types/platform_result.dart';
 
 /// Web sharing via the Web Share API.
 ///
-/// Falls back to [PlatformUnsupported] if the browser doesn't support sharing.
+/// Returns [PlatformUnsupported] when the browser doesn't support sharing,
+/// [PlatformCancelled] when the user dismisses the share dialog.
 class WebSharingAdapter implements SharingAdapter {
   @override
   Future<PlatformResult<void>> shareText({
@@ -20,13 +21,7 @@ class WebSharingAdapter implements SharingAdapter {
       await web.window.navigator.share(data).toDart;
       return const PlatformSupported(null);
     } catch (e) {
-      if (_isAbortError(e)) return const PlatformSupported(null);
-      if (_isNotSupportedError(e)) {
-        return const PlatformUnsupported(
-          'Sharing is not supported in this browser',
-        );
-      }
-      return PlatformFailed('Failed to share text', error: e);
+      return _mapShareError(e, 'Failed to share text');
     }
   }
 
@@ -65,20 +60,56 @@ class WebSharingAdapter implements SharingAdapter {
       await web.window.navigator.share(data).toDart;
       return const PlatformSupported(null);
     } catch (e) {
-      if (_isAbortError(e)) return const PlatformSupported(null);
-      if (_isNotSupportedError(e)) {
-        return const PlatformUnsupported(
-          'Sharing is not supported in this browser',
-        );
-      }
-      return PlatformFailed('Failed to share file', error: e);
+      return _mapShareError(e, 'Failed to share file');
     }
   }
 
-  bool _isAbortError(Object e) => e.toString().contains('AbortError');
+  @override
+  Future<PlatformResult<void>> shareFileStream({
+    required Stream<List<int>> byteStream,
+    required String fileName,
+    String? mimeType,
+    String? subject,
+    String? text,
+  }) async {
+    // The Web Share API needs the full content up front, so the stream is
+    // buffered into memory here. The interface documents this limitation.
+    final builder = BytesBuilder(copy: false);
+    try {
+      await for (final chunk in byteStream) {
+        builder.add(chunk);
+      }
+    } catch (e) {
+      return PlatformFailed('Failed to read the byte stream', error: e);
+    }
+    return shareFile(
+      bytes: builder.takeBytes(),
+      fileName: fileName,
+      mimeType: mimeType,
+      subject: subject,
+      text: text,
+    );
+  }
 
-  bool _isNotSupportedError(Object e) {
-    final msg = e.toString();
-    return msg.contains('not a function') || msg.contains('NotSupportedError');
+  /// Web Share errors arrive as untyped JS DOMExceptions — string matching
+  /// on the exception name is the only signal available.
+  PlatformResult<void> _mapShareError(Object e, String message) {
+    final text = e.toString();
+    if (text.contains('AbortError')) {
+      return const PlatformCancelled();
+    }
+    if (text.contains('not a function') || text.contains('NotSupportedError')) {
+      return const PlatformUnsupported(
+        'Sharing is not supported in this browser',
+      );
+    }
+    if (text.contains('NotAllowedError')) {
+      return const PlatformPermissionDenied(
+        message:
+            'The browser blocked sharing (needs a user gesture or '
+            'permission)',
+      );
+    }
+    return PlatformFailed(message, error: e);
   }
 }

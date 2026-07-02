@@ -2,7 +2,7 @@ import 'package:device_io/src/picker/native/native_asset_picker_adapter.dart';
 import 'package:device_io/src/download/native/native_download_adapter.dart';
 import 'package:device_io/src/opener/native/native_file_opener_adapter.dart';
 import 'package:device_io/src/sharing/native/native_sharing_adapter.dart';
-import 'package:device_io/src/device_io_container.dart';
+import 'package:device_io/src/runtime/device_io.dart';
 
 /// Initialize device IO with native (dart:io) adapters.
 ///

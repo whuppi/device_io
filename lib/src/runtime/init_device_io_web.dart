@@ -1,4 +1,4 @@
-import 'package:device_io/src/device_io_container.dart';
+import 'package:device_io/src/runtime/device_io.dart';
 import 'package:device_io/src/picker/web/web_asset_picker_adapter.dart';
 import 'package:device_io/src/download/web/web_download_adapter.dart';
 import 'package:device_io/src/opener/web/web_file_opener_adapter.dart';

@@ -1,16 +1,61 @@
-import 'package:device_io/src/types/platform_result.dart';
-import 'package:device_io/src/opener/file_opener_adapter.dart';
+import 'dart:async';
+import 'dart:js_interop';
+import 'dart:typed_data';
 
-/// Web file opener — not supported.
+import 'package:web/web.dart' as web;
+
+import 'package:device_io/src/opener/file_opener_adapter.dart';
+import 'package:device_io/src/types/mime_types.dart';
+import 'package:device_io/src/types/platform_result.dart';
+
+/// Web file opener — blob URL in a new tab.
 ///
-/// Files on web live in IndexedDB, not on a real filesystem.
-/// There's no absolute path to open.
+/// The browser IS the viewer on web: PDFs, images, video, and text render
+/// in the new tab; anything the browser can't display downloads instead.
 class WebFileOpenerAdapter implements FileOpenerAdapter {
   @override
-  Future<PlatformResult<void>> openFile({
+  Future<PlatformResult<void>> openBytes({
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    try {
+      final blob = web.Blob(
+        [bytes.toJS].toJS,
+        web.BlobPropertyBag(type: mimeType ?? mimeTypeFromFileName(fileName)),
+      );
+      final url = web.URL.createObjectURL(blob);
+
+      final opened = web.window.open(url, '_blank');
+      if (opened == null) {
+        web.URL.revokeObjectURL(url);
+        return const PlatformFailed(
+          'The browser blocked opening a new tab (popup blocker)',
+        );
+      }
+
+      // The tab needs the URL alive while it loads; revoke after a grace
+      // period instead of immediately. The blob is freed on page unload
+      // regardless, so a missed revoke can't leak past the session.
+      unawaited(
+        Future<void>.delayed(
+          const Duration(minutes: 1),
+          () => web.URL.revokeObjectURL(url),
+        ),
+      );
+      return const PlatformSupported(null);
+    } catch (e) {
+      return PlatformFailed('Failed to open file', error: e);
+    }
+  }
+
+  @override
+  Future<PlatformResult<void>> openPath({
     required String filePath,
     String? mimeType,
   }) async {
-    return const PlatformUnsupported('File opening is not supported on web');
+    return const PlatformUnsupported(
+      'Filesystem paths do not exist on web — use openBytes instead',
+    );
   }
 }
