@@ -96,6 +96,78 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
     );
   }
 
+  // ── Video + mixed media ──
+
+  @override
+  Future<PlatformResult<PickedAsset>> pickVideo({Duration? maxDuration}) async {
+    return _pickVideoFromSource(ImageSource.gallery, maxDuration: maxDuration);
+  }
+
+  @override
+  Future<PlatformResult<PickedAsset>> captureVideo({
+    Duration? maxDuration,
+  }) async {
+    if (!isCameraSupported) {
+      return const PlatformUnsupported(
+        'Camera capture is not available on this platform '
+        '(desktop has no camera integration)',
+      );
+    }
+    return _pickVideoFromSource(ImageSource.camera, maxDuration: maxDuration);
+  }
+
+  @override
+  Future<PlatformResult<PickedAsset>> pickMedia({
+    int? maxWidth,
+    int? maxHeight,
+    int? imageQuality,
+  }) async {
+    try {
+      final xFile = await _picker.pickMedia(
+        maxWidth: maxWidth?.toDouble(),
+        maxHeight: maxHeight?.toDouble(),
+        imageQuality: imageQuality,
+      );
+
+      if (xFile == null) {
+        return const PlatformCancelled();
+      }
+      return PlatformSupported(_fromXFile(xFile));
+    } on PlatformException catch (e, st) {
+      return _failure(e, st, 'Failed to pick media');
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to pick media', error: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<PlatformResult<List<PickedAsset>>> pickMultipleMedia({
+    int? maxWidth,
+    int? maxHeight,
+    int? imageQuality,
+    int? limit,
+  }) async {
+    try {
+      final xFiles = await _picker.pickMultipleMedia(
+        maxWidth: maxWidth?.toDouble(),
+        maxHeight: maxHeight?.toDouble(),
+        imageQuality: imageQuality,
+        limit: limit,
+      );
+
+      if (xFiles.isEmpty) {
+        return const PlatformCancelled();
+      }
+      return PlatformSupported(xFiles.map(_fromXFile).toList());
+    } on PlatformException catch (e, st) {
+      return _failure(e, st, 'Failed to pick media');
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to pick media', error: e, stackTrace: st);
+    }
+  }
+
   // ── Generic files ──
 
   @override
@@ -182,6 +254,28 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
     } catch (e, st) {
       if (e is Error) rethrow;
       return PlatformFailed('Failed to pick image', error: e, stackTrace: st);
+    }
+  }
+
+  Future<PlatformResult<PickedAsset>> _pickVideoFromSource(
+    ImageSource source, {
+    Duration? maxDuration,
+  }) async {
+    try {
+      final xFile = await _picker.pickVideo(
+        source: source,
+        maxDuration: maxDuration,
+      );
+
+      if (xFile == null) {
+        return const PlatformCancelled();
+      }
+      return PlatformSupported(_fromXFile(xFile));
+    } on PlatformException catch (e, st) {
+      return _failure(e, st, 'Failed to pick video');
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return PlatformFailed('Failed to pick video', error: e, stackTrace: st);
     }
   }
 
