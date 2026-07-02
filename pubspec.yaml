@@ -73,3 +73,9 @@ dev_dependencies:
 
   # Lint rules
   flutter_lints: ^6.0.0
+
+  # Test fakes substitute the plugins at their platform-interface seam
+  # (MockPlatformInterfaceMixin + the interface types). Dev-only: tests
+  # never import the plugins themselves — a make test-guards rule.
+  plugin_platform_interface: ^2.1.8
+  image_picker_platform_interface: ^2.11.0

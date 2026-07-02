@@ -1,0 +1,9 @@
+# Default test target is VM. Browser tests live in test/web_runners/ and
+# run explicitly:
+#
+#   fvm flutter test                                  # VM suites
+#   fvm flutter test --platform chrome test/web_runners   # real Chrome
+#
+# The VM invocation lists explicit directories (see the Makefile) so the
+# web_runners files — which import package:web — are never compiled for
+# the VM.
