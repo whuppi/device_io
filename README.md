@@ -24,7 +24,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license: MIT"></a>
 </p>
 
-Pick images and files, share through the OS sheet, save to the device, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web. Every operation returns a typed result instead of throwing, so a cancelled picker, a platform that can't do the thing, and a real failure are three different values your `switch` handles — no `kIsWeb` in your app code, ever. Reads are lazy: a 2GB video from the gallery never lands in memory unless you ask for its bytes.
+Pick images and files, share through the OS sheet, save to the device, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web. Every operation returns a typed result instead of throwing, so a cancelled picker, an unsupported platform, and a real failure are distinct values your `switch` handles — no `kIsWeb` in your app code, ever. Reads are lazy: a 2GB video from the gallery never lands in memory unless you ask for its bytes.
 
 > like it? a [⭐ star](https://github.com/whuppi/device_io) or [👍 like](https://pub.dev/packages/device_io) is the entire marketing budget. [Bugs & features →](https://github.com/whuppi/device_io/issues)
 
@@ -193,7 +193,7 @@ Because two of the five outcomes aren't errors, and exceptions can't say so.
 
 A user who opens the photo picker and taps **Cancel** did nothing wrong. A desktop that has **no camera** isn't broken. If those threw, every call site would wrap a `try/catch` and then guess, from the exception type or its message, whether to show an error, stay quiet, or hide a button. And a nullable return (`Future<PickedAsset?>`) is no better — `null` can't tell "cancelled" apart from "unsupported."
 
-So the package spends a variant on each real outcome. `PlatformCancelled` and `PlatformUnsupported` are first-class values, not failures; `PlatformFailed` is reserved for the genuine "supported, but it broke" case, with `PlatformPermissionDenied` as a named subtype because its recovery differs (send the user to Settings, don't retry). The result type is sealed, so the compiler flags any arm you forgot — you find out at build time, not from a user's crash report.
+So the package spends a variant on each real outcome. `PlatformCancelled` and `PlatformUnsupported` are values, not failures; `PlatformFailed` is reserved for the genuine "supported, but it broke" case, with `PlatformPermissionDenied` as a named subtype because its recovery differs (send the user to Settings, don't retry). The result type is sealed, so the compiler flags any arm you forgot — you find out at build time, not from a user's crash report.
 
 Throws are kept for one thing only: **programmer error**. Pass an empty list to `shareFiles` and it throws `ArgumentError` synchronously — that's a bug in the call, not a runtime state to branch on.
 
@@ -334,7 +334,7 @@ await download.saveAs(bytes: pdfBytes, fileName: 'report.pdf', dialogTitle: 'Sav
 await download.saveStreamToDevice(byteStream: asset.readStream(), fileName: 'video.mp4');
 ```
 
-**Read this before you rely on `saveToDevice` on a phone.** On desktop it writes to the real Downloads folder. On mobile it writes to an **app-private** downloads folder (`Android/data/<pkg>/files/Download`, the iOS sandbox Downloads dir) — the user will **not** find it in their Files or Downloads app, and it's deleted on uninstall. For a save the user can actually see on mobile, use `saveAs`, which routes through the Android create-document dialog (public storage, no permissions) and the iOS Files export sheet.
+**Read this before you rely on `saveToDevice` on a phone.** On desktop it writes to the real Downloads folder. On mobile it writes to an **app-private** downloads folder (`Android/data/<pkg>/files/Download`, the iOS sandbox Downloads dir) — the user won't find it in their Files or Downloads app, and it's deleted on uninstall. For a save the user can actually see on mobile, use `saveAs`, which routes through the Android create-document dialog (public storage, no permissions) and the iOS Files export sheet.
 
 Silent saves never clobber an existing file: a taken `report.pdf` becomes `report (1).pdf`, matching browser behavior, and unsafe characters in the name are sanitized away. Streaming saves write to a temporary `.part` file that only becomes the final file once the stream completes, so a failed stream leaves nothing behind. `mimeType` sets the blob content type on web; native platforms infer the type from the extension and ignore it.
 
@@ -399,11 +399,11 @@ Camera capture is available on phones and tablets — native apps and mobile bro
 
 <br>
 
-The rule the package holds itself to: **your app never writes `kIsWeb`, and it never gets a lie.** Two things make that true.
+Your app never writes `kIsWeb`, and it never gets a fake answer. Two things make that true.
 
-**Where a platform genuinely can't do something, you get a typed `PlatformUnsupported` — never a silent no-op, and never a faked success.** `openPath` on web returns `Unsupported` because browsers have no filesystem paths; camera capture returns `Unsupported` on desktop. Every one of those claims was checked against the underlying plugin's source before it was written — the package doesn't guess at what's impossible.
+**Where a platform genuinely can't do something, you get a typed `PlatformUnsupported`** — never a silent no-op, never a faked success. `openPath` on web returns `Unsupported` because browsers have no filesystem paths; camera capture returns `Unsupported` on desktop. Every one of those claims was checked against the underlying plugin's source before it was written, rather than assumed.
 
-**pub.dev sees all six platforms, and a gate keeps it that way.** A cross-platform Flutter package silently drops a platform the moment a shared file imports something native-only. Two of the dependencies here (`share_plus`, `open_filex`) would do exactly that if imported the obvious way, so the package reaches them through their platform interface and method channel instead, and a [pana](https://pub.dev/packages/pana) check in the test suite fails the build if the six-platform score ever regresses. The upshot for you: the badge is earned, not asserted.
+The six-platform badge is also guarded. A cross-platform Flutter package silently drops a platform the moment a shared file imports something native-only, and two of the dependencies here (`share_plus`, `open_filex`) would do exactly that if imported the obvious way. So the package reaches them through their platform interface and method channel instead, and a [pana](https://pub.dev/packages/pana) check in the test suite fails the build if the six-platform score ever slips.
 
 </details>
 
