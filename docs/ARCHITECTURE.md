@@ -1,6 +1,6 @@
 # device_io — Architecture
 
-> **Type:** architecture · **Scope:** device_io · **Status:** SHIPPED (test suite being rebuilt) · **Last verified:** 2026-07-02
+> **Type:** architecture · **Scope:** device_io · **Status:** SHIPPED · **Last verified:** 2026-07-03
 > **Companion docs:** [`CAPABILITY_ROADMAP.md`](CAPABILITY_ROADMAP.md) (status per capability) · [`UPDATING.md`](UPDATING.md) (maintenance recipes)
 
 What the package IS: the current shipped shape of every layer. When this
@@ -159,22 +159,47 @@ never imported:
 
 ---
 
-## 8. Test architecture (suite being rebuilt)
+## 8. Test architecture
 
-Three mappings, mirroring the reference package pattern:
+Three layers, every file opening with a CHARTER comment ("this file
+alone proves: ...") and a Diet line naming what it consumes:
 
-1. **Mirror** — pure logic tests mirror `lib/src/` one concern per file
-   (`test/types/`, `test/_shared/`, `test/picker/`, …).
-2. **Batteries × runners** — adapter-contract behavior is written once as
-   a platform-agnostic battery and instantiated by a VM runner (native
-   adapters + fake `path_provider`) and a Chrome runner (`-p chrome`,
-   real blob / feature-detection paths).
-3. **Harness** — `Timeout.factor`-based timeouts (CI's `--timeout=30x`
-   scales; local stays tight), plugin fakes; the harness is itself
-   tested.
+1. **Mirror suites (VM)** — tests mirror `lib/src/` one concern per
+   file: `test/types/`, `test/_shared/`, `test/picker/`,
+   `test/download/`, `test/sharing/`, `test/opener/`. Plugins are never
+   imported; they're substituted at their platform-INTERFACE seams
+   (recording fakes in `test/harness/`) or their method channels are
+   mocked with the exact protocol verified from plugin source. Native
+   adapter tests assert real on-disk effects.
+2. **`test/web_runners/` (real Chrome)** — the web adapters run in an
+   actual browser (`make test-web`). The JS surface the adapters call is
+   instrumented: globals replaced with recording closures scripting
+   genuine resolved/rejected promises, restored per test with
+   prototype-chain awareness (instance methods like `navigator.share`
+   live on the prototype).
+3. **Harness** — `Timeout.factor`-based `t()` (CI's `--timeout=30x`
+   scales, local stays tight), declared-truth byte fixtures
+   (prime-modulus patterned bytes whose integrity check catches any
+   dropped/duplicated/reordered chunk), the recording fakes.
 
-No fixture generator: nothing format-shaped is under test — inline const
-byte fixtures suffice.
+Assertions are behavioral, never liveness: fakes record what they were
+asked so option passthrough is asserted from the recorded request, and
+results are compared to truths DECLARED in the test — never re-derived
+from the code under test. `make test-guards` mechanically enforces the
+import rules (browser imports only under `web_runners/`; `dart:io`
+outside the native-adapter suites carries an `io-exempt:` reason; no
+test imports a plugin's own Dart).
+
+A deliberate deviation from the reference package's batteries×runners
+shape: that pattern exists for ONE implementation running under many
+platform configs. device_io's platform variance lives in DIFFERENT
+implementations with different observables (native saves return paths
+and touch a real filesystem; web saves return null and touch blobs), so
+tests mirror the implementations directly instead of forcing a shared
+battery.
+
+No fixture generator: nothing format-shaped is under test — the inline
+declared-truth fixtures suffice.
 
 ---
 

@@ -67,6 +67,6 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 |---|---|---|
 | Strict lints + zero-issue analyzer | DONE | |
 | Makefile gates (format / analyze / analyze-floor / platforms) | DONE | |
-| Test suite (mirror + batteries × VM/Chrome runners) | BUILDING | Structure planned in `ARCHITECTURE.md` §8 |
+| Test suite (mirror VM suites + real-Chrome web runners) | DONE | Chartered behavioral tests; recording fakes at platform-interface seams; instrumented JS surface in real Chrome; mechanical guards (`make test-guards`). Shape in `ARCHITECTURE.md` |
 | Example app | DONE | Six platforms, one exhaustive `PlatformResult` renderer, lazy reads on tap; the integration smoke test joins the test-suite rebuild |
 | CI via the shared workflow repo | PLANNED | device_io is the first consumer of `whuppi/ci` |

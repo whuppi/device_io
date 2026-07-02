@@ -70,9 +70,11 @@ The maintainer handles releases.
   return must be backed by verified platform/plugin behavior, not
   convenience — check the claim against the plugin sources before
   writing it.
-- Tests mirror `lib/src/`; platform-variant behavior is written once as
-  a battery and instantiated by a VM runner and a Chrome runner (see the
-  test-architecture section in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
+- Tests mirror `lib/src/` (VM) with the web adapters exercised in real
+  Chrome under `test/web_runners/`. Every test file opens with a CHARTER
+  stating what it alone proves; assertions are behavioral against
+  declared truths, never liveness. Read the test-architecture section in
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before adding tests.
 
 ## Adding a capability
 
