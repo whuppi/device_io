@@ -32,4 +32,4 @@ updates:
       default-days: 7
     groups:
       whuppi-ci:
-        patterns: ["whuppi/ci"]
+        patterns: ["whuppi/ci*"]

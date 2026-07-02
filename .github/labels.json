@@ -4,7 +4,7 @@
   { "name": "docs",             "color": "0075CA", "description": "Documentation change (auto)" },
   { "name": "ci",               "color": "BFD4F2", "description": "Build, CI, or workflow change (auto)" },
   { "name": "dependencies",     "color": "0366D6", "description": "Dependency version bump (auto)" },
-  { "name": "upgrade-pins",     "color": "1D76DB", "description": "Pinned tool or SDK bump, review the change (auto)" },
+  { "name": "upgrade-sdk",      "color": "1D76DB", "description": "Flutter SDK bump, review the change (auto)" },
   { "name": "upgrade-locks",    "color": "1D76DB", "description": "Lockfile refresh (auto)" },
   { "name": "ready-to-test",    "color": "FBCA04", "description": "Triggers the full cross-target test run (manual)" },
   { "name": "release",          "color": "6F42C1", "description": "Release promotion PR (manual)" },
