@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:device_io/src/opener/file_opener_adapter.dart';

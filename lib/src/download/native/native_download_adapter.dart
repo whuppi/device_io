@@ -11,12 +11,13 @@ import 'package:device_io/src/download/download_adapter.dart';
 /// Saves files to the device's downloads directory (or app documents
 /// on platforms where downloads dir is not accessible).
 class NativeDownloadAdapter implements DownloadAdapter {
+  /// Creates the adapter, optionally scoping saves to [appSubfolder].
+  NativeDownloadAdapter({this.appSubfolder});
+
   /// Optional subfolder within the downloads directory.
   /// e.g. 'MyApp' → saves to Downloads/MyApp/filename.
   /// If null, saves directly to the downloads directory.
   final String? appSubfolder;
-
-  NativeDownloadAdapter({this.appSubfolder});
 
   @override
   Future<PlatformResult<String?>> saveToDevice({
@@ -26,7 +27,7 @@ class NativeDownloadAdapter implements DownloadAdapter {
   }) async {
     try {
       final dir = await _downloadsDir();
-      final file = File('${dir.path}/$fileName');
+      final file = await _freshFile(dir, fileName);
       await file.writeAsBytes(bytes, flush: true);
       return PlatformSupported(file.path);
     } catch (e) {
@@ -42,7 +43,7 @@ class NativeDownloadAdapter implements DownloadAdapter {
   }) async {
     try {
       final dir = await _downloadsDir();
-      final file = File('${dir.path}/$fileName');
+      final file = await _freshFile(dir, fileName);
       final sink = file.openWrite();
       try {
         await sink.addStream(byteStream);
@@ -53,6 +54,27 @@ class NativeDownloadAdapter implements DownloadAdapter {
     } catch (e) {
       return PlatformFailed('Failed to save file', error: e);
     }
+  }
+
+  /// Resolves [fileName] inside [dir] without clobbering existing files —
+  /// a taken name gets a numbered variant (`report (1).pdf`), matching
+  /// browser download behavior.
+  Future<File> _freshFile(Directory dir, String fileName) async {
+    var file = File('${dir.path}/$fileName');
+    if (!await file.exists()) return file;
+
+    // Split on the LAST dot so multi-dot names keep their final extension.
+    // A leading dot (`.hidden`) is part of the stem, not an extension.
+    final dot = fileName.lastIndexOf('.');
+    final stem = dot > 0 ? fileName.substring(0, dot) : fileName;
+    final ext = dot > 0 ? fileName.substring(dot) : '';
+
+    var counter = 1;
+    while (await file.exists()) {
+      file = File('${dir.path}/$stem ($counter)$ext');
+      counter++;
+    }
+    return file;
   }
 
   Future<Directory> _downloadsDir() async {

@@ -7,6 +7,7 @@ import 'dart:typed_data' show Uint8List;
 /// - [PlatformUnsupported] — operation is not available on this platform
 /// - [PlatformFailed] — operation is supported but failed at runtime
 sealed class PlatformResult<T> {
+  /// Const base constructor for the sealed subclasses.
   const PlatformResult();
 
   /// True if this is a [PlatformSupported] result.
@@ -20,9 +21,9 @@ sealed class PlatformResult<T> {
 
   /// Gets the value if supported, or null otherwise.
   T? get valueOrNull => switch (this) {
-        PlatformSupported(:final value) => value,
-        _ => null,
-      };
+    PlatformSupported(:final value) => value,
+    _ => null,
+  };
 
   /// Execute callback based on result type.
   R when<R>({
@@ -40,19 +41,23 @@ sealed class PlatformResult<T> {
   /// Map the success value.
   PlatformResult<U> map<U>(U Function(T) transform) {
     return switch (this) {
-      PlatformSupported(:final value) =>
-        PlatformSupported(transform(value)),
+      PlatformSupported(:final value) => PlatformSupported(transform(value)),
       PlatformUnsupported(:final reason) => PlatformUnsupported(reason),
-      PlatformFailed(:final message, :final error) =>
-        PlatformFailed(message, error: error),
+      PlatformFailed(:final message, :final error) => PlatformFailed(
+        message,
+        error: error,
+      ),
     };
   }
 }
 
 /// Operation succeeded with a value.
 final class PlatformSupported<T> extends PlatformResult<T> {
-  final T value;
+  /// Creates a success result carrying [value].
   const PlatformSupported(this.value);
+
+  /// The operation's result value.
+  final T value;
 
   @override
   String toString() => 'PlatformSupported($value)';
@@ -60,8 +65,11 @@ final class PlatformSupported<T> extends PlatformResult<T> {
 
 /// Operation is not supported on this platform.
 final class PlatformUnsupported<T> extends PlatformResult<T> {
-  final String reason;
+  /// Creates an unsupported result explaining why in [reason].
   const PlatformUnsupported(this.reason);
+
+  /// Human-readable explanation of why the operation is unavailable.
+  final String reason;
 
   @override
   String toString() => 'PlatformUnsupported($reason)';
@@ -69,9 +77,14 @@ final class PlatformUnsupported<T> extends PlatformResult<T> {
 
 /// Operation is supported but failed at runtime.
 final class PlatformFailed<T> extends PlatformResult<T> {
-  final String message;
-  final Object? error;
+  /// Creates a failure result with a [message] and optional [error] cause.
   const PlatformFailed(this.message, {this.error});
+
+  /// Human-readable description of the failure.
+  final String message;
+
+  /// The underlying error, when one was caught.
+  final Object? error;
 
   @override
   String toString() => 'PlatformFailed($message)';
@@ -97,22 +110,13 @@ final class PlatformFailed<T> extends PlatformResult<T> {
 // layer should write the bytes to disk itself — that concern belongs
 // outside this package.
 class PickedAsset {
-  /// MIME type (e.g. "image/png", "video/mp4").
-  final String mimeType;
-
-  /// Original file name, if available.
-  final String? fileName;
-
-  final Future<Uint8List> Function() _readBytes;
-  final Stream<List<int>> Function() _readStream;
-
   PickedAsset._({
     required this.mimeType,
     this.fileName,
     required Future<Uint8List> Function() readBytes,
     required Stream<List<int>> Function() readStream,
-  })  : _readBytes = readBytes,
-        _readStream = readStream;
+  }) : _readBytes = readBytes,
+       _readStream = readStream;
 
   /// Create from in-memory bytes (web, or when bytes are already loaded).
   factory PickedAsset.fromBytes({
@@ -145,6 +149,15 @@ class PickedAsset {
       readStream: streamFromFile,
     );
   }
+
+  /// MIME type (e.g. "image/png", "video/mp4").
+  final String mimeType;
+
+  /// Original file name, if available.
+  final String? fileName;
+
+  final Future<Uint8List> Function() _readBytes;
+  final Stream<List<int>> Function() _readStream;
 
   /// Read the entire asset into memory.
   ///

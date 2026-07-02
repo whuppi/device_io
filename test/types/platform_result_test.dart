@@ -83,7 +83,10 @@ void main() {
       });
 
       test('when calls failed callback', () {
-        final result = PlatformFailed<int>('Disk full', error: Exception('no space'));
+        final result = PlatformFailed<int>(
+          'Disk full',
+          error: Exception('no space'),
+        );
         final output = result.when(
           supported: (v) => 'got $v',
           unsupported: (r) => 'unsupported: $r',

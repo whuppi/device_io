@@ -22,7 +22,9 @@ class WebSharingAdapter implements SharingAdapter {
     } catch (e) {
       if (_isAbortError(e)) return const PlatformSupported(null);
       if (_isNotSupportedError(e)) {
-        return const PlatformUnsupported('Sharing is not supported in this browser');
+        return const PlatformUnsupported(
+          'Sharing is not supported in this browser',
+        );
       }
       return PlatformFailed('Failed to share text', error: e);
     }
@@ -55,7 +57,9 @@ class WebSharingAdapter implements SharingAdapter {
 
       // Check if the browser can share files.
       if (!web.window.navigator.canShare(data)) {
-        return const PlatformUnsupported('File sharing is not supported in this browser');
+        return const PlatformUnsupported(
+          'File sharing is not supported in this browser',
+        );
       }
 
       await web.window.navigator.share(data).toDart;
@@ -63,7 +67,9 @@ class WebSharingAdapter implements SharingAdapter {
     } catch (e) {
       if (_isAbortError(e)) return const PlatformSupported(null);
       if (_isNotSupportedError(e)) {
-        return const PlatformUnsupported('Sharing is not supported in this browser');
+        return const PlatformUnsupported(
+          'Sharing is not supported in this browser',
+        );
       }
       return PlatformFailed('Failed to share file', error: e);
     }

@@ -33,11 +33,13 @@ class WebAssetPickerAdapter implements AssetPickerAdapter {
       final bytes = await xFile.readAsBytes();
       final mimeType = xFile.mimeType ?? mimeTypeFromFileName(xFile.name);
 
-      return PlatformSupported(PickedAsset.fromBytes(
-        bytes: bytes,
-        mimeType: mimeType,
-        fileName: xFile.name,
-      ));
+      return PlatformSupported(
+        PickedAsset.fromBytes(
+          bytes: bytes,
+          mimeType: mimeType,
+          fileName: xFile.name,
+        ),
+      );
     } catch (e) {
       return PlatformFailed('Failed to pick image', error: e);
     }
@@ -74,14 +76,15 @@ class WebAssetPickerAdapter implements AssetPickerAdapter {
 
       final mimeType = mimeTypeFromFileName(file.name);
 
-      return PlatformSupported(PickedAsset.fromBytes(
-        bytes: file.bytes!,
-        mimeType: mimeType,
-        fileName: file.name,
-      ));
+      return PlatformSupported(
+        PickedAsset.fromBytes(
+          bytes: file.bytes!,
+          mimeType: mimeType,
+          fileName: file.name,
+        ),
+      );
     } catch (e) {
       return PlatformFailed('Failed to pick file', error: e);
     }
   }
-
 }

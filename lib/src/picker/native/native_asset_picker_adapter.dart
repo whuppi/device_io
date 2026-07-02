@@ -1,7 +1,8 @@
 import 'dart:io' show File;
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:image_picker/image_picker.dart';
 
 import 'package:device_io/src/types/mime_types.dart';
@@ -38,7 +39,9 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
     int? imageQuality,
   }) async {
     if (!isCameraSupported) {
-      return const PlatformUnsupported('Camera is not available on this platform');
+      return const PlatformUnsupported(
+        'Camera is not available on this platform',
+      );
     }
     return _pickFromSource(
       ImageSource.camera,
@@ -63,15 +66,23 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
       }
 
       final file = result.files.single;
-      final path = file.path!;
+      final path = file.path;
+      if (path == null) {
+        // file_picker returns path-less results in rare cases (e.g. some
+        // Android content providers). Surface it as a clear failure instead
+        // of a null-assertion crash.
+        return const PlatformFailed('Picked file has no accessible path');
+      }
       final mimeType = mimeTypeFromFileName(file.name);
 
-      return PlatformSupported(PickedAsset.fromFile(
-        mimeType: mimeType,
-        fileName: file.name,
-        readBytesFromFile: () => File(path).readAsBytes(),
-        streamFromFile: () => File(path).openRead(),
-      ));
+      return PlatformSupported(
+        PickedAsset.fromFile(
+          mimeType: mimeType,
+          fileName: file.name,
+          readBytesFromFile: () => File(path).readAsBytes(),
+          streamFromFile: () => File(path).openRead(),
+        ),
+      );
     } catch (e) {
       return PlatformFailed('Failed to pick file', error: e);
     }
@@ -98,15 +109,16 @@ class NativeAssetPickerAdapter implements AssetPickerAdapter {
       final path = xFile.path;
       final mimeType = xFile.mimeType ?? mimeTypeFromFileName(xFile.name);
 
-      return PlatformSupported(PickedAsset.fromFile(
-        mimeType: mimeType,
-        fileName: xFile.name,
-        readBytesFromFile: () => File(path).readAsBytes(),
-        streamFromFile: () => File(path).openRead(),
-      ));
+      return PlatformSupported(
+        PickedAsset.fromFile(
+          mimeType: mimeType,
+          fileName: xFile.name,
+          readBytesFromFile: () => File(path).readAsBytes(),
+          streamFromFile: () => File(path).openRead(),
+        ),
+      );
     } catch (e) {
       return PlatformFailed('Failed to pick image', error: e);
     }
   }
-
 }

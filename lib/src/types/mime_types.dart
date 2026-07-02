@@ -1,6 +1,6 @@
 /// Centralized MIME type ↔ file extension mappings.
 ///
-/// This is the single source of truth for all format knowledge in the app.
+/// The single source of truth for format knowledge in this package.
 /// Every layer that needs to convert between MIME types and extensions
 /// MUST use these mappings — never hardcode extension lists elsewhere.
 ///
@@ -14,23 +14,24 @@
 /// 1. **Inbound** — picker/upload gives us a MIME type (`image/png`)
 /// 2. **Conversion** — [mimeToExtension] maps it to `"png"`
 /// 3. **Storage** — file written as `photo.png` to storage
-/// 4. **Outbound** — we read the extension back for display/icon selection
+/// 4. **Outbound** — the extension is read back for display/icon selection
 ///
 /// At step 4 there is no MIME type — re-deriving one from the extension
 /// would be a pointless round-trip. The extension is authoritative because
-/// we control the write path.
+/// the write path is controlled.
 ///
 /// ## Adding new formats
 ///
-/// Add the MIME type and extension to [_mimeToExt]. The reverse mapping
-/// [_extToMime] is derived automatically. Then add the extension to the
+/// Add the MIME type and extension to [mimeToExtension]. The reverse mapping
+/// [extensionToMime] is derived automatically. Then add the extension to the
 /// appropriate category set ([imageExtensions], [audioExtensions], etc.)
 /// so that UI code picks the right icon without hardcoding.
 library;
 
 /// MIME type → file extension (without leading dot).
 ///
-/// Used by [FileStorageEngine.extensionFromMime] at write time.
+/// Use at write time to derive an on-disk extension from a picker or
+/// transport MIME type.
 const Map<String, String> mimeToExtension = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -51,11 +52,13 @@ const Map<String, String> mimeToExtension = {
   'application/xml': 'xml',
   'application/zip': 'zip',
   'application/msword': 'doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      'docx',
   'application/vnd.ms-excel': 'xls',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
   'application/vnd.ms-powerpoint': 'ppt',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+      'pptx',
   'text/plain': 'txt',
   'text/csv': 'csv',
   'text/markdown': 'md',
@@ -88,22 +91,41 @@ String mimeTypeFromFileName(String fileName) {
 
 // ── Extension category sets (for UI icon selection) ──
 
-/// Image file extensions recognized by the app.
+/// Image file extensions.
 const Set<String> imageExtensions = {
-  'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'heif',
+  'png',
+  'jpg',
+  'jpeg',
+  'webp',
+  'gif',
+  'bmp',
+  'heic',
+  'heif',
 };
 
-/// Audio file extensions recognized by the app.
+/// Audio file extensions.
 const Set<String> audioExtensions = {'mp3', 'wav', 'ogg', 'aac'};
 
-/// Video file extensions recognized by the app.
+/// Video file extensions.
 const Set<String> videoExtensions = {'mp4', 'webm'};
 
-/// Document file extensions recognized by the app.
+/// Document file extensions.
 const Set<String> documentExtensions = {
-  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-  'txt', 'csv', 'md', 'json', 'xml', 'html', 'zip',
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'txt',
+  'csv',
+  'md',
+  'json',
+  'xml',
+  'html',
+  'zip',
 };
 
-/// Vector/drawing file extensions recognized by the app.
+/// Vector/drawing file extensions.
 const Set<String> vectorExtensions = {'svg'};

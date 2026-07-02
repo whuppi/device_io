@@ -32,12 +32,14 @@ class WebDownloadAdapter implements DownloadAdapter {
     String? mimeType,
   }) async {
     try {
-      // Collect stream into bytes, then trigger download.
-      final chunks = <int>[];
+      // Blob downloads need the full content up front, so the stream is
+      // buffered into memory here — web cannot stream to disk without the
+      // File System Access API. The interface documents this limitation.
+      final builder = BytesBuilder(copy: false);
       await for (final chunk in byteStream) {
-        chunks.addAll(chunk);
+        builder.add(chunk);
       }
-      _triggerDownload(Uint8List.fromList(chunks), fileName, mimeType);
+      _triggerDownload(builder.takeBytes(), fileName, mimeType);
       return const PlatformSupported(null);
     } catch (e) {
       return PlatformFailed('Failed to trigger download', error: e);

@@ -3,8 +3,8 @@ import 'package:device_io/src/types/platform_result.dart';
 /// Platform-agnostic asset/image picking.
 ///
 /// Implementations:
-/// - [NativeAssetPickerAdapter] — wraps image_picker (mobile/desktop)
-/// - [WebAssetPickerAdapter] — HTML file input (web)
+/// - `NativeAssetPickerAdapter` — wraps image_picker (mobile/desktop)
+/// - `WebAssetPickerAdapter` — HTML file input (web)
 abstract interface class AssetPickerAdapter {
   /// Whether camera capture is supported on this platform.
   /// UI should hide the camera button when false.

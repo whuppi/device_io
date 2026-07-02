@@ -7,9 +7,9 @@ import 'package:device_io/src/types/platform_result.dart';
 /// (files live in IndexedDB, not on a real filesystem).
 ///
 /// Implementations:
-/// - [NativeFileOpenerAdapter] — Process.run('open', ...) on macOS/Linux,
+/// - `NativeFileOpenerAdapter` — Process.run('open', ...) on macOS/Linux,
 ///   Process.run('start', ...) on Windows, url_launcher on mobile (future)
-/// - [WebFileOpenerAdapter] — returns [PlatformUnsupported]
+/// - `WebFileOpenerAdapter` — returns [PlatformUnsupported]
 abstract interface class FileOpenerAdapter {
   /// Open a file at the given absolute path in the OS default app.
   ///

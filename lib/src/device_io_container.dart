@@ -13,6 +13,14 @@ import 'package:device_io/src/sharing/sharing_adapter.dart';
 /// - Native (iOS/Android/macOS/Windows/Linux): dart:io-based adapters
 /// - Web: browser API adapters (file input, Web Share, blob URLs)
 class DeviceIO {
+  /// Creates a coordinator from the four platform adapters.
+  const DeviceIO({
+    required this.assetPicker,
+    required this.sharing,
+    required this.download,
+    required this.fileOpener,
+  });
+
   /// Image/file picking from device gallery, camera, or file system.
   final AssetPickerAdapter assetPicker;
 
@@ -24,11 +32,4 @@ class DeviceIO {
 
   /// Open files in the OS default viewer (Preview, Photos, etc.).
   final FileOpenerAdapter fileOpener;
-
-  const DeviceIO({
-    required this.assetPicker,
-    required this.sharing,
-    required this.download,
-    required this.fileOpener,
-  });
 }

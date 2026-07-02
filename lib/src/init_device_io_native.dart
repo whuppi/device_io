@@ -10,9 +10,7 @@ import 'package:device_io/src/device_io_container.dart';
 ///
 /// [downloadSubfolder] is an optional subfolder name within the downloads
 /// directory (e.g. 'MyApp'). If null, saves directly to downloads.
-Future<DeviceIO> initDeviceIO({
-  String? downloadSubfolder,
-}) async {
+Future<DeviceIO> initDeviceIO({String? downloadSubfolder}) async {
   return DeviceIO(
     assetPicker: NativeAssetPickerAdapter(),
     sharing: NativeSharingAdapter(),

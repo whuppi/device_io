@@ -11,8 +11,6 @@ class WebFileOpenerAdapter implements FileOpenerAdapter {
     required String filePath,
     String? mimeType,
   }) async {
-    return const PlatformUnsupported(
-      'File opening is not supported on web',
-    );
+    return const PlatformUnsupported('File opening is not supported on web');
   }
 }

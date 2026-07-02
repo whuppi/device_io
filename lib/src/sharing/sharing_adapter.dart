@@ -8,8 +8,8 @@ import 'package:device_io/src/types/platform_result.dart';
 /// callers just pass bytes.
 ///
 /// Implementations:
-/// - [NativeSharingAdapter] — wraps share_plus (mobile/desktop)
-/// - [WebSharingAdapter] — Web Share API (web)
+/// - `NativeSharingAdapter` — wraps share_plus (mobile/desktop)
+/// - `WebSharingAdapter` — Web Share API (web)
 abstract interface class SharingAdapter {
   /// Share text content via OS share sheet.
   Future<PlatformResult<void>> shareText({
