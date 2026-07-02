@@ -17,17 +17,18 @@ dependencies:
   flutter:
     sdk: flutter
   image_picker: ^1.1.2     # Asset/image picking
-  file_picker: ^8.1.6      # Generic file picking
-  share_plus: ^11.1.0      # OS share sheet
+  file_picker: ^11.0.2     # Generic file picking + save dialogs
+  share_plus: ^12.0.0      # OS share sheet (13.x needs win32 ^6; blocked
+                           # until file_picker >=12 stable drops win32 ^5)
   path_provider: ^2.1.5    # Downloads directory
   web: ^1.1.0              # Web APIs (file input, share, blob)
   open_filex: ^4.6.0       # Open files in external apps
-  mime: ^2.0.0
-  cross_file: ^0.3.5+4
+  mime: ^2.0.0             # Full MIME database behind the curated maps
+  cross_file: ^0.3.5+4     # XFile — lazy cross-platform file handles
 
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
   path_provider_platform_interface: ^2.1.3
-  test: ^1.26.0
+  test: ^1.31.0

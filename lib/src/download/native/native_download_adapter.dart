@@ -99,7 +99,7 @@ class NativeDownloadAdapter implements DownloadAdapter {
       // Mobile: system create-document / Files export dialog — file_picker
       // writes the bytes. Desktop: native save dialog — file_picker writes
       // the bytes to the chosen path.
-      final path = await FilePicker.platform.saveFile(
+      final path = await FilePicker.saveFile(
         dialogTitle: dialogTitle,
         fileName: sanitizeFileName(fileName),
         bytes: bytes,

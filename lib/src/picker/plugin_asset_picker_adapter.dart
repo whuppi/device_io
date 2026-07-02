@@ -120,7 +120,7 @@ class PluginAssetPickerAdapter implements AssetPickerAdapter {
     required bool allowMultiple,
   }) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: allowedExtensions != null ? FileType.custom : FileType.any,
         allowedExtensions: allowedExtensions,
         allowMultiple: allowMultiple,
