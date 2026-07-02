@@ -96,8 +96,10 @@ class NativeFileOpenerAdapter implements FileOpenerAdapter {
   ) async {
     final result = await Process.run(command, args);
     if (result.exitCode != 0) {
+      final stderr = result.stderr.toString().trim();
       return PlatformFailed(
-        'Failed to open file (exit code ${result.exitCode})',
+        'Failed to open file (exit code ${result.exitCode}'
+        '${stderr.isEmpty ? '' : ': $stderr'})',
       );
     }
     return const PlatformSupported(null);

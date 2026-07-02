@@ -3,10 +3,8 @@ import 'package:device_io/src/types/platform_result.dart';
 
 /// Platform-agnostic asset/image picking.
 ///
-/// Implementations:
-/// - `NativeAssetPickerAdapter` — wraps image_picker / file_picker
-///   (mobile/desktop)
-/// - `WebAssetPickerAdapter` — HTML file input (web)
+/// Implemented by `PluginAssetPickerAdapter` (all platforms — the
+/// underlying image_picker / file_picker plugins are already federated).
 ///
 /// Every method returns [PlatformCancelled] when the user dismisses the
 /// picker, and [PlatformPermissionDenied] when the OS blocks access

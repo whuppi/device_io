@@ -92,4 +92,10 @@ void main() {
       expect(extensionFromMimeType('made/up', fallback: 'dat'), 'dat');
     });
   });
+
+  group('immutability', () {
+    test('extensionToMime rejects writes', () {
+      expect(() => extensionToMime['hack'] = 'x/y', throwsUnsupportedError);
+    });
+  });
 }

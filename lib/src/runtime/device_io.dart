@@ -1,6 +1,6 @@
-import 'package:device_io/src/picker/asset_picker_adapter.dart';
 import 'package:device_io/src/download/download_adapter.dart';
 import 'package:device_io/src/opener/file_opener_adapter.dart';
+import 'package:device_io/src/picker/asset_picker_adapter.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
 
 /// Central device IO coordinator.
@@ -9,9 +9,9 @@ import 'package:device_io/src/sharing/sharing_adapter.dart';
 /// through this class — never via image_picker, share_plus, or other
 /// platform packages directly.
 ///
-/// Constructed per-platform:
-/// - Native (iOS/Android/macOS/Windows/Linux): dart:io-based adapters
-/// - Web: browser API adapters (file input, Web Share, blob URLs)
+/// Constructed by `initDeviceIO`, which resolves the right adapter set:
+/// dart:io-based adapters on native, browser API adapters on web, and the
+/// platform-neutral picker everywhere.
 class DeviceIO {
   /// Creates a coordinator from the four platform adapters.
   const DeviceIO({

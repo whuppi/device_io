@@ -78,16 +78,18 @@ const Map<String, String> mimeToExtension = {
   'application/octet-stream': 'bin',
 };
 
-/// File extension → MIME type.
+/// File extension → MIME type — the curated set.
 ///
-/// Used by asset picker adapters when the platform doesn't provide a MIME type.
-/// Derived from [mimeToExtension] with additional aliases (e.g. jpeg → image/jpeg).
-final Map<String, String> extensionToMime = {
+/// Used by asset picker adapters when the platform doesn't provide a MIME
+/// type. Derived from [mimeToExtension] with additional aliases
+/// (e.g. jpeg → image/jpeg). Unmodifiable — a plain literal here would be
+/// public mutable global state.
+final Map<String, String> extensionToMime = Map.unmodifiable({
   for (final entry in mimeToExtension.entries) entry.value: entry.key,
   // Aliases not in the reverse map
   'jpeg': 'image/jpeg',
   'heif': 'image/heic',
-};
+});
 
 /// Infer a MIME type from a filename's extension.
 ///

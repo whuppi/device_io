@@ -25,6 +25,9 @@ abstract interface class DownloadAdapter {
   /// download behavior. Path separators and other unsafe characters in
   /// [fileName] are sanitized away.
   ///
+  /// [mimeType] sets the blob content type on web; native platforms infer
+  /// the type from the file extension and ignore it.
+  ///
   /// Returns the saved file path (null on web where no path is meaningful).
   Future<PlatformResult<String?>> saveToDevice({
     required Uint8List bytes,
@@ -40,6 +43,9 @@ abstract interface class DownloadAdapter {
   /// stream completes — a failed stream leaves nothing behind. On web the
   /// stream is buffered into memory before the download triggers — blob
   /// downloads need the full content up front.
+  ///
+  /// [mimeType] sets the blob content type on web; native platforms infer
+  /// the type from the file extension and ignore it.
   ///
   /// Returns the saved file path (null on web).
   Future<PlatformResult<String?>> saveStreamToDevice({

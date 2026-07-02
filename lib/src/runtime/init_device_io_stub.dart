@@ -10,5 +10,7 @@ import 'package:device_io/src/types/device_io_config.dart';
 Future<DeviceIO> initDeviceIO({
   DeviceIOConfig config = const DeviceIOConfig(),
 }) {
-  throw UnsupportedError('Platform not supported');
+  throw UnsupportedError(
+    'device_io: no platform implementation for this target',
+  );
 }

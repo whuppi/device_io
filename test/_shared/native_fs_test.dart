@@ -39,6 +39,16 @@ void main() {
       expect(sanitizeFileName('///'), '___');
     });
 
+    test('prefixes Windows reserved device names', () {
+      expect(sanitizeFileName('CON'), '_CON');
+      expect(sanitizeFileName('con.txt'), '_con.txt');
+      expect(sanitizeFileName('NUL.tar.gz'), '_NUL.tar.gz');
+      expect(sanitizeFileName('lpt1.pdf'), '_lpt1.pdf');
+      // Only the part before the FIRST dot counts.
+      expect(sanitizeFileName('Console.txt'), 'Console.txt');
+      expect(sanitizeFileName('xCON.txt'), 'xCON.txt');
+    });
+
     test('truncates overlong names but keeps the extension', () {
       final long = '${'a' * 300}.pdf';
       final result = sanitizeFileName(long);
