@@ -25,6 +25,14 @@ never trust memory or docs):
 `make platforms` catches attribution regressions mechanically; the rest
 of the table needs the source check.
 
+Platform entitlements consumers must declare (verified via the example's
+macOS integration smoke): silent `saveToDevice` into `~/Downloads` needs
+`com.apple.security.files.downloads.read-write`; `saveAs` and picking need
+`com.apple.security.files.user-selected.read-write`. Without the Downloads
+entitlement a sandboxed macOS app gets `PlatformFailed` from `saveToDevice`
+— the package surfaces it correctly, but the README's Install section is
+the fix. iOS needs the three usage-description keys.
+
 ## Upgrading a dependency
 
 1. Read the changelog between the current and target versions (pub cache:
