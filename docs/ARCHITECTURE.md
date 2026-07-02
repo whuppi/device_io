@@ -63,6 +63,7 @@ lib/
       asset_picker_adapter.dart          ← contract: pick/capture, single+multi
       picked_asset.dart                  ← lazy value type (no paths, no bytes)
       plugin_asset_picker_adapter.dart   ← ONE impl, all platforms (§4)
+      web_file_pick.dart + _stub/_web    ← FSA lazy-pick seam, STUB DEFAULT (§3)
     runtime/
       device_io.dart           ← the DeviceIO container (four adapter fields)
       init_device_io.dart      ← conditional export — STUB IS THE DEFAULT (§3)
@@ -83,7 +84,7 @@ lib/
 
 | Situation | Tool | Where |
 |---|---|---|
-| Code cannot compile cross-platform | Conditional import, **stub as default** | `runtime/init_device_io.dart` |
+| Code cannot compile cross-platform | Conditional import, **stub as default** | `runtime/init_device_io.dart`, `picker/web_file_pick.dart` |
 | Compiles everywhere, behavior differs | `kIsWeb` const branch (tree-shaken) | picker's file-pick path |
 | Browser capability varies at runtime | Feature detection, graceful ladder | web `saveAs` (File System Access → download), Web Share (`hasProperty` → `canShare`) |
 

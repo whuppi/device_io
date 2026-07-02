@@ -91,7 +91,13 @@ PickedAsset.lazy(
 ## New surface (no migration needed, worth adopting)
 
 - `assetPicker.pickImages` / `pickFiles` — multi-select.
+- `assetPicker.pickVideo` / `captureVideo` / `pickMedia` /
+  `pickMultipleMedia` — video and mixed-media picking.
 - `sharing.shareFileStream` — constant-memory large-file shares.
+- `sharing.shareFiles` — several files in one sheet, via the `ShareFile`
+  value type.
+- `sharePositionOrigin` on every share method — the iPad popover anchor.
+- `saveAs`/`saveToDevice`/`saveStreamToDevice` all take `mimeType`.
 - `download.saveAs` — user-visible save via the system dialog (the
   mobile answer to `saveToDevice` landing in app-private storage).
 - Share-sheet dismissal now surfaces as `PlatformCancelled` instead of
@@ -106,3 +112,5 @@ PickedAsset.lazy(
   name.
 - Camera capture reports supported on mobile BROWSERS too (previously
   blanket-unsupported on web).
+- On Chromium, generic file picks read lazily via the File System Access
+  picker instead of eagerly loading every selected file.

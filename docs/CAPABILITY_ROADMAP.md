@@ -16,10 +16,10 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Pick single image (gallery) | DONE | Lazy XFile-backed reads on every platform |
 | Pick multiple images (+ limit) | DONE | Empty selection = `Cancelled`, never an empty list |
 | Camera capture | DONE | Phones/tablets — native apps AND mobile browsers (capture attribute). Desktop is `Unsupported` (verified: desktop impls throw without a camera delegate) |
-| Pick single / multiple files (+ extension filter) | DONE | Native lazy via cached path; web eager (`withData`) |
+| Pick single / multiple files (+ extension filter) | DONE | Native lazy via cached path; web lazy via File System Access where present, eager `withData` fallback |
 | Permission mapping | DONE | Exact image_picker codes → `PlatformPermissionDenied`; file_picker's SAF needs none |
-| Pick video / generic media | PLANNED | `pickVideo` / `pickMedia` over image_picker's video surface |
-| Lazy web file picks | PLANNED | File System Access `showOpenFilePicker` (Chromium) for blob-backed lazy handles; `withData` stays the fallback |
+| Pick video / mixed media | DONE | `pickVideo` / `captureVideo` / `pickMedia` / `pickMultipleMedia`, lazy like every pick; `maxDuration` honored for camera recording only (plugin behavior, documented); no permission codes exist beyond the four mapped (verified against plugin source) |
+| Lazy web file picks | DONE | `showOpenFilePicker` (Chromium) behind a stub-default conditional export; blob-backed handles read on demand; `withData` fallback on Firefox/Safari |
 
 ## Sharing — `SharingAdapter`
 
@@ -29,8 +29,8 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Share file from bytes | DONE | Staged in unique cache subdirs; never eagerly deleted (receiver race) |
 | Share file from stream | DONE | Constant memory on native; buffered on web (Web Share needs materialized files) |
 | Dismissal as `Cancelled` | DONE | `ShareResultStatus.dismissed` / web `AbortError` |
-| Share multiple files | PLANNED | `ShareParams.files` already carries a list; surface it |
-| Share position origin (iPadOS popover anchor) | PLANNED | `sharePositionOrigin` passthrough |
+| Share multiple files | DONE | `shareFiles` + the `ShareFile` value type; one staging dir per call with in-call name dedup; empty list throws `ArgumentError` (caller bug) |
+| Share position origin (iPadOS popover anchor) | DONE | `sharePositionOrigin` on every share method; anchors the popover on iPad/Mac, ignored elsewhere (verified against ShareParams docs) |
 
 ## Saving — `DownloadAdapter`
 
@@ -38,7 +38,7 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 |---|---|---|
 | Silent save (bytes) | DONE | Sanitized names, atomic no-clobber numbering, dir auto-created |
 | Silent save (stream) | DONE | `.part`-then-rename; failed stream leaves nothing |
-| `saveAs` via system dialog | DONE | SAF (Android) / Files export (iOS) / native dialog (desktop) / File System Access with download fallback (web) |
+| `saveAs` via system dialog | DONE | SAF (Android) / Files export (iOS) / native dialog (desktop) / File System Access with download fallback (web); `mimeType` feeds the fallback's blob type |
 | Web streaming `saveAs` writes | DONE | `FileSystemWritableFileStream` on Chromium |
 | Silent save to PUBLIC storage on mobile | PLANNED | Needs MediaStore native code (a plugin or our own channel) — `saveToDevice` on mobile is app-private today, documented loudly |
 | Silent streaming saves on web | WONT_DO (for now) | A no-dialog streaming write needs a File System Access handle, which only user-initiated dialogs can produce; revisit if a handle-reuse API is added |
@@ -68,5 +68,5 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Strict lints + zero-issue analyzer | DONE | |
 | Makefile gates (format / analyze / analyze-floor / platforms) | DONE | |
 | Test suite (mirror + batteries × VM/Chrome runners) | BUILDING | Structure planned in `ARCHITECTURE.md` §8 |
-| Example app (doubles as integration harness) | PLANNED | Smoke test for the programmatic surfaces per platform |
+| Example app | DONE | Six platforms, one exhaustive `PlatformResult` renderer, lazy reads on tap; the integration smoke test joins the test-suite rebuild |
 | CI via the shared workflow repo | PLANNED | device_io is the first consumer of `whuppi/ci` |
