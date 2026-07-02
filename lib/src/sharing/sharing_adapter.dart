@@ -4,6 +4,14 @@ import 'package:device_io/src/types/platform_result.dart';
 
 /// Platform-agnostic data sharing via OS share sheet.
 ///
+/// ```dart
+/// await deviceIO.sharing.shareFile(
+///   bytes: pngBytes,
+///   fileName: 'photo.png',
+///   text: 'Look at this!',
+/// );
+/// ```
+///
 /// Implementations handle temp file staging internally — callers just
 /// pass bytes or a stream.
 ///

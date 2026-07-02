@@ -13,7 +13,7 @@ import 'package:device_io/src/types/platform_result.dart';
 /// Silent saves go to the downloads directory — the user's real Downloads
 /// on desktop, an app-private folder on mobile (see the interface docs).
 /// [saveAs] opens the system save dialog instead.
-class NativeDownloadAdapter implements DownloadAdapter {
+final class NativeDownloadAdapter implements DownloadAdapter {
   /// Creates the adapter, optionally scoping saves to [appSubfolder].
   NativeDownloadAdapter({this.appSubfolder});
 
@@ -21,6 +21,8 @@ class NativeDownloadAdapter implements DownloadAdapter {
   /// e.g. 'MyApp' → saves to Downloads/MyApp/filename.
   /// If null, saves directly to the downloads directory.
   final String? appSubfolder;
+
+  // ── Silent saves — downloads directory ──
 
   @override
   Future<PlatformResult<String?>> saveToDevice({
@@ -89,6 +91,8 @@ class NativeDownloadAdapter implements DownloadAdapter {
     }
   }
 
+  // ── User-visible save — system dialog ──
+
   @override
   Future<PlatformResult<String?>> saveAs({
     required Uint8List bytes,
@@ -117,6 +121,8 @@ class NativeDownloadAdapter implements DownloadAdapter {
       );
     }
   }
+
+  // ── Internals ──
 
   Future<Directory> _downloadsDir() async {
     // getDownloadsDirectory() is supported on desktop (macOS, Windows,

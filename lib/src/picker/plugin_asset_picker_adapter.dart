@@ -19,7 +19,7 @@ import 'package:device_io/src/types/platform_result.dart';
 // only where flagged with kIsWeb below (web file picks having no lazy
 // handle). The other capabilities keep their native/web adapter pairs
 // because they genuinely bind platform APIs.
-class PluginAssetPickerAdapter implements AssetPickerAdapter {
+final class PluginAssetPickerAdapter implements AssetPickerAdapter {
   final _picker = ImagePicker();
 
   /// Camera capture works wherever the device is a phone/tablet — native
@@ -32,6 +32,8 @@ class PluginAssetPickerAdapter implements AssetPickerAdapter {
   bool get isCameraSupported =>
       defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.android;
+
+  // ── Images — gallery + camera ──
 
   @override
   Future<PlatformResult<PickedAsset>> pickImage({
@@ -94,6 +96,8 @@ class PluginAssetPickerAdapter implements AssetPickerAdapter {
     );
   }
 
+  // ── Generic files ──
+
   @override
   Future<PlatformResult<PickedAsset>> pickFile({
     List<String>? allowedExtensions,
@@ -114,6 +118,8 @@ class PluginAssetPickerAdapter implements AssetPickerAdapter {
       allowMultiple: true,
     );
   }
+
+  // ── Internals ──
 
   Future<PlatformResult<List<PickedAsset>>> _pickPlatformFiles({
     required List<String>? allowedExtensions,

@@ -4,6 +4,14 @@ import 'package:device_io/src/types/platform_result.dart';
 
 /// Platform-agnostic file saving to the device.
 ///
+/// ```dart
+/// // Silent save — no user interaction:
+/// await deviceIO.download.saveToDevice(bytes: bytes, fileName: 'export.csv');
+///
+/// // User picks the destination via the system dialog:
+/// await deviceIO.download.saveAs(bytes: bytes, fileName: 'report.pdf');
+/// ```
+///
 /// Implementations:
 /// - `NativeDownloadAdapter` — writes to the downloads directory
 ///   (mobile/desktop)

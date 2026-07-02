@@ -13,7 +13,7 @@ import 'package:device_io/src/types/platform_result.dart';
 ///
 /// - macOS: `open <path>` · Linux: `xdg-open <path>` · Windows: `start`
 /// - iOS/Android: open_filex (content-URI aware, permission mapped)
-class NativeFileOpenerAdapter implements FileOpenerAdapter {
+final class NativeFileOpenerAdapter implements FileOpenerAdapter {
   @override
   Future<PlatformResult<void>> openBytes({
     required Uint8List bytes,

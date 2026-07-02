@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 /// Result of a platform IO operation that may not be supported on all
 /// platforms.
 ///
@@ -20,6 +22,7 @@
 ///   case PlatformFailed(:final message): showError(message);
 /// }
 /// ```
+@immutable
 sealed class PlatformResult<T> {
   /// Const base constructor for the sealed subclasses.
   const PlatformResult();

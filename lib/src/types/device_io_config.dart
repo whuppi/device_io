@@ -1,8 +1,11 @@
+import 'package:meta/meta.dart';
+
 /// Configuration for `initDeviceIO`.
 ///
 /// One object instead of loose parameters so new knobs never change the
 /// init signature.
-class DeviceIOConfig {
+@immutable
+final class DeviceIOConfig {
   /// Creates a configuration. All fields optional.
   const DeviceIOConfig({this.downloadSubfolder});
 

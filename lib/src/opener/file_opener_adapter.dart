@@ -7,6 +7,18 @@ import 'package:device_io/src/types/platform_result.dart';
 /// Opens content in Preview, Photos, QuickTime, a browser tab — whatever
 /// the platform associates with the content type.
 ///
+/// ```dart
+/// // Works on every platform (web opens a new tab):
+/// await deviceIO.fileOpener.openBytes(bytes: pdfBytes, fileName: 'doc.pdf');
+///
+/// // Open what saveToDevice just wrote (native only):
+/// final saved = await deviceIO.download.saveToDevice(
+///   bytes: bytes, fileName: 'report.pdf');
+/// if (saved case PlatformSupported(value: final String path)) {
+///   await deviceIO.fileOpener.openPath(filePath: path);
+/// }
+/// ```
+///
 /// Implementations:
 /// - `NativeFileOpenerAdapter` — OS open command / open_filex
 ///   (mobile/desktop)

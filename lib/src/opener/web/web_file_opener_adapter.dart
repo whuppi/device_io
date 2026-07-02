@@ -12,7 +12,7 @@ import 'package:device_io/src/types/platform_result.dart';
 ///
 /// The browser IS the viewer on web: PDFs, images, video, and text render
 /// in the new tab; anything the browser can't display downloads instead.
-class WebFileOpenerAdapter implements FileOpenerAdapter {
+final class WebFileOpenerAdapter implements FileOpenerAdapter {
   @override
   Future<PlatformResult<void>> openBytes({
     required Uint8List bytes,

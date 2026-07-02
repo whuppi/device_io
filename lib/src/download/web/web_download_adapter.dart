@@ -27,7 +27,7 @@ extension type _SaveFilePickerOptions._(JSObject _) implements JSObject {
 /// Silent saves trigger a browser download via blob URL + anchor click.
 /// [saveAs] uses the real save dialog where the browser has one
 /// (File System Access API on Chromium), falling back to a download.
-class WebDownloadAdapter implements DownloadAdapter {
+final class WebDownloadAdapter implements DownloadAdapter {
   @override
   Future<PlatformResult<String?>> saveToDevice({
     required Uint8List bytes,

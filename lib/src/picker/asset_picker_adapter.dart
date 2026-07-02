@@ -3,6 +3,21 @@ import 'package:device_io/src/types/platform_result.dart';
 
 /// Platform-agnostic asset/image picking.
 ///
+/// ```dart
+/// final result = await deviceIO.assetPicker.pickImage();
+/// switch (result) {
+///   case PlatformSupported(:final value):
+///     await upload(await value.readBytes());
+///   case PlatformCancelled():
+///     break; // user changed their mind
+///   case PlatformPermissionDenied():
+///     promptForSettings();
+///   case PlatformUnsupported(:final reason):
+///   case PlatformFailed():
+///     showError(result);
+/// }
+/// ```
+///
 /// Implemented by `PluginAssetPickerAdapter` (all platforms — the
 /// underlying image_picker / file_picker plugins are already federated).
 ///

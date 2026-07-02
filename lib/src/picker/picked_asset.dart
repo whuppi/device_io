@@ -1,11 +1,24 @@
 import 'dart:typed_data' show Uint8List;
 
+import 'package:meta/meta.dart';
+
 /// A picked asset (image, file, etc.).
 ///
 /// Use [readStream] for large files (streaming, constant memory) or
 /// [readBytes] for small files (convenience). Nothing is loaded until one
 /// of them is called, and each call returns a fresh read — both may be
 /// called any number of times.
+///
+/// ```dart
+/// // Small file — bytes in one go:
+/// final avatar = await asset.readBytes();
+///
+/// // Large file — stream without holding it in memory:
+/// await deviceIO.download.saveStreamToDevice(
+///   byteStream: asset.readStream(),
+///   fileName: asset.fileName ?? 'video.mp4',
+/// );
+/// ```
 ///
 /// Laziness by source:
 /// - Native picks read from disk on demand.
@@ -22,13 +35,14 @@ import 'dart:typed_data' show Uint8List;
 // cross-platform and lazy. If native FFI needs a real path, the app
 // layer should write the bytes to disk itself — that concern belongs
 // outside this package.
-class PickedAsset {
+@immutable
+final class PickedAsset {
   /// Create from lazy read callbacks.
   ///
   /// The contract for implementers: each [readStream] call must return a
   /// FRESH stream (consumers may read more than once), and neither
   /// callback runs any I/O until invoked.
-  PickedAsset.lazy({
+  const PickedAsset.lazy({
     required this.mimeType,
     this.fileName,
     required Future<Uint8List> Function() readBytes,

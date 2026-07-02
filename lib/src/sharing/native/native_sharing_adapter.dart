@@ -11,7 +11,7 @@ import 'package:device_io/src/types/platform_result.dart';
 /// Native (mobile/desktop) sharing via share_plus.
 ///
 /// Files are staged in the OS temporary directory before sharing.
-class NativeSharingAdapter implements SharingAdapter {
+final class NativeSharingAdapter implements SharingAdapter {
   @override
   Future<PlatformResult<void>> shareText({
     required String text,

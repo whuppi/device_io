@@ -12,7 +12,7 @@ import 'package:device_io/src/sharing/sharing_adapter.dart';
 /// Constructed by `initDeviceIO`, which resolves the right adapter set:
 /// dart:io-based adapters on native, browser API adapters on web, and the
 /// platform-neutral picker everywhere.
-class DeviceIO {
+final class DeviceIO {
   /// Creates a coordinator from the four platform adapters.
   const DeviceIO({
     required this.assetPicker,

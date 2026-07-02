@@ -12,7 +12,7 @@ import 'package:device_io/src/types/platform_result.dart';
 ///
 /// Returns [PlatformUnsupported] when the browser doesn't support sharing,
 /// [PlatformCancelled] when the user dismisses the share dialog.
-class WebSharingAdapter implements SharingAdapter {
+final class WebSharingAdapter implements SharingAdapter {
   @override
   Future<PlatformResult<void>> shareText({
     required String text,
