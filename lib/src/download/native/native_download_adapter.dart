@@ -98,6 +98,7 @@ final class NativeDownloadAdapter implements DownloadAdapter {
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
+    String? mimeType, // Web-fallback concern; native dialogs infer the type.
   }) async {
     try {
       // Mobile: system create-document / Files export dialog — file_picker

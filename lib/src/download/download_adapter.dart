@@ -73,11 +73,16 @@ abstract interface class DownloadAdapter {
   ///   API (Chromium — returns the chosen file name); elsewhere a plain
   ///   browser download (returns null).
   ///
+  /// [mimeType] sets the content type when the web fallback serves the
+  /// bytes as a plain download; it is ignored where the platform writes
+  /// the bytes directly (native dialogs, File System Access).
+  ///
   /// Returns [PlatformCancelled] when the user dismisses the dialog.
   /// Returns the chosen location (platform-dependent form).
   Future<PlatformResult<String?>> saveAs({
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
+    String? mimeType,
   });
 }

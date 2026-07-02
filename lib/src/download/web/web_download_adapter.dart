@@ -79,12 +79,13 @@ final class WebDownloadAdapter implements DownloadAdapter {
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
+    String? mimeType,
   }) async {
     // dialogTitle has no browser equivalent — save dialogs are chrome-owned.
     if (!_savePickerSupported) {
       // No File System Access API (Firefox, Safari): a browser download IS
       // the user-visible save on those browsers.
-      return saveToDevice(bytes: bytes, fileName: fileName);
+      return saveToDevice(bytes: bytes, fileName: fileName, mimeType: mimeType);
     }
     try {
       final handle = await _showSaveFilePicker(
@@ -101,7 +102,11 @@ final class WebDownloadAdapter implements DownloadAdapter {
       }
       // SecurityError (called outside a user gesture) and other dialog
       // failures: the save should still succeed — fall back to a download.
-      final fallback = await saveToDevice(bytes: bytes, fileName: fileName);
+      final fallback = await saveToDevice(
+        bytes: bytes,
+        fileName: fileName,
+        mimeType: mimeType,
+      );
       return switch (fallback) {
         PlatformSupported() => fallback,
         _ => PlatformFailed(
