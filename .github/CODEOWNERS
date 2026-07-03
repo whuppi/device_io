@@ -6,7 +6,7 @@
 # Order matters — last match wins (gitignore rules).
 
 # Default: maintainers team owns everything
-*                          @whuppi/device_io-maintainers
+*                          @whuppi/device-io-maintainers
 
 # Release files: repo owner only (contributors don't write changelogs or versions)
 /CHANGELOG.md              @chaudharydeepanshu
