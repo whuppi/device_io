@@ -3,8 +3,7 @@
 // package:file_picker (a banned test import). So instead of swapping a
 // platform instance, this fake mocks the plugin's MethodChannel directly.
 //
-// Channel + method + argument map + return shape verified against
-// file_picker 11.0.2 file_picker_method_channel.dart:
+// The channel + method + argument map + return shape it reproduces:
 //   channel  'miguelruivo.flutter.plugins.filepicker' (StandardMethodCodec)
 //   method   the FileType name — 'custom' (with an extension filter) or 'any'
 //   args     {allowMultipleSelection, allowedExtensions, withData,

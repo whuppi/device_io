@@ -19,13 +19,12 @@
 // the real recorded channel argument) and compares to test/harness/bytes.dart
 // declared truth, never to values re-derived from the subject.
 //
-// file_picker save channel verified in file_picker-11.0.2:
-//   lib/src/platform/file_picker_method_channel.dart:16 channel name
-//   `miguelruivo.flutter.plugins.filepicker`; :161 method `save`; :162-166
-//   args `{fileName, fileType, initialDirectory, allowedExtensions, bytes}`;
-//   returns String? path (null == cancelled). Default instance is
-//   MethodChannelFilePicker (file_picker_platform_interface.dart:21), so
-//   mocking the channel intercepts FilePicker.saveFile without importing it.
+// file_picker's `save` goes over method channel
+// `miguelruivo.flutter.plugins.filepicker`, method `save`, args
+// `{fileName, fileType, initialDirectory, allowedExtensions, bytes}`,
+// returns String? path (null == cancelled). The default platform instance
+// is MethodChannelFilePicker, so mocking the channel intercepts
+// FilePicker.saveFile without importing the plugin.
 //
 // Diet: dart:io here is legitimate — the SUBJECT wraps dart:io, and this suite
 // lives under test/download/ (not a dart:io-guarded directory). No plugin
