@@ -452,7 +452,6 @@ The README covers the everyday stuff. wanna go deeper?
 | [Architecture](docs/ARCHITECTURE.md) | How it's built: the four adapters, the platform seam, lazy reads |
 | [Capabilities](docs/CAPABILITY_ROADMAP.md) | What's shipped, what's planned, what won't happen |
 | [Updating](docs/UPDATING.md) | Maintenance recipes and pinned source-of-truth links |
-| [Migration](docs/MIGRATION.md) | Upgrading from the pre-release workspace API |
 | [Contributing](CONTRIBUTING.md) | Setup, PR workflow, adding capabilities |
 
 ---
