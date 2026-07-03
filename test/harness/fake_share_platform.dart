@@ -4,14 +4,14 @@
 // text, subject, sharePositionOrigin, and the staged XFile list — are what
 // the sharing suite asserts the adapter actually built.
 //
-// Mechanism verified in share_plus_platform_interface-6.1.0:
-//   - lib/platform_interface/share_plus_platform.dart:29  `set instance` runs
-//     `PlatformInterface.verifyToken`; MockPlatformInterfaceMixin waives it.
-//   - :34  `Future<ShareResult> share(ShareParams params)` is the single
-//     entry point the adapter calls via `SharePlatform.instance.share(...)`.
-//   - :166 `class ShareResult(this.raw, this.status)`;
-//     :202 `enum ShareResultStatus { success, dismissed, unavailable }`.
-//   - :182 `ShareResult.unavailable` static const.
+// The share_plus platform-interface mechanism it reproduces:
+//   - `set instance` runs `PlatformInterface.verifyToken`;
+//     MockPlatformInterfaceMixin waives it, so a fake is accepted.
+//   - `Future<ShareResult> share(ShareParams params)` is the single entry
+//     point the adapter calls via `SharePlatform.instance.share(...)`.
+//   - `ShareResult(this.raw, this.status)`,
+//     `enum ShareResultStatus { success, dismissed, unavailable }`,
+//     `ShareResult.unavailable` static const.
 //
 // Diet: no filesystem imports — records object graphs only; no plugin
 // barrels — only the share_plus platform INTERFACE plus the mock mixin.

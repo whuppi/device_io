@@ -21,8 +21,7 @@
 // truth and to mimeType values DECLARED here (image/png, text/csv, ...).
 //
 // ShareResult / ShareResultStatus / ShareParams / SharePlatform.instance
-// mechanism is documented in test/harness/fake_share_platform.dart against
-// share_plus_platform_interface-6.1.0.
+// mechanism is documented in test/harness/fake_share_platform.dart.
 //
 // Diet: dart:io is legitimate — the SUBJECT stages via dart:io and this suite
 // lives under test/sharing/ (not a dart:io-guarded directory). No plugin
