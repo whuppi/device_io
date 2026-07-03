@@ -30,17 +30,17 @@ dependencies:
   image_picker: ^1.1.2
 
   # Generic file picking + the system save dialogs behind saveAs
-  file_picker: ^11.0.2
+  file_picker: ^12.0.0-beta.7
 
   # OS share sheet — REGISTRATION ONLY: code imports go through the
   # platform interface below, because this barrel's desktop impls pin
   # url_launcher_linux/windows and poison pub.dev platform attribution.
   # 13.x requires win32 ^6 while every stable file_picker (<12.0.0-beta)
   # requires win32 ^5 — bump both together when file_picker 12 leaves beta.
-  share_plus: ^12.0.0
+  share_plus: ^13.2.0
 
   # The share_plus API surface this package actually imports
-  share_plus_platform_interface: ^6.1.0
+  share_plus_platform_interface: ^7.1.0
 
   # Downloads / documents directories for silent native saves
   path_provider: ^2.1.5
