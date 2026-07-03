@@ -78,7 +78,7 @@ final class NativeFileOpenerAdapter implements FileOpenerAdapter {
   // every desktop platform from pub.dev's attribution of THIS package. The
   // dependency stays in pubspec — it carries the Android content-URI and
   // iOS UIDocumentInteractionController native code the channel reaches.
-  // Protocol verified against open_filex 4.7.0 source; result codes:
+  // open_filex protocol result codes:
   // 0 done · -1 no app · -2 not found · -3 permission denied · -4 error.
   static const _openFileChannel = MethodChannel('open_file');
 

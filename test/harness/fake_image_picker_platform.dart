@@ -3,9 +3,8 @@
 // disables the plugin-interface token check so a test double is accepted.
 //
 // This fake RECORDS the option arguments the adapter routes to each platform
-// method (getImageFromSource / getMultiImageWithOptions / getMedia / getVideo,
-// verified against image_picker 1.2.3's ImagePicker delegation) and returns
-// SCRIPTED XFiles / empty lists / thrown errors. Tests assert both the
+// method (getImageFromSource / getMultiImageWithOptions / getMedia / getVideo)
+// and returns SCRIPTED XFiles / empty lists / thrown errors. Tests assert both the
 // recorded request AND the mapped result, so a gutted adapter that dropped an
 // option or mis-routed a source is caught.
 //

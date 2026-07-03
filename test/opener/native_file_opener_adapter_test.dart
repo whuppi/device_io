@@ -23,8 +23,8 @@
 // arguments and the real staged bytes off disk, comparing to bytes.dart
 // declared truth and to result strings DECLARED in the switch under test.
 //
-// open_filex protocol verified in open_filex 4.7.0 (mirrored in the adapter's
-// own source comment): channel `open_file`, method `open_file`, args
+// open_filex protocol (mirrored in the adapter's own source comment):
+// channel `open_file`, method `open_file`, args
 // {file_path, type, uti}, JSON `{type, message}`, codes 0/-1/-2/-3/-4.
 //
 // Diet: dart:io is legitimate — the SUBJECT wraps dart:io and this suite lives

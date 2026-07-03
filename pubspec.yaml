@@ -29,20 +29,31 @@ dependencies:
   # Asset/image picking (federated across all six platforms)
   image_picker: ^1.1.2
 
-  # Generic file picking + the system save dialogs behind saveAs
-  file_picker: ^11.0.2
+  # Generic file picking + the system save dialogs behind saveAs.
+  # Pinned to the 12 BETA on purpose — do NOT "clean up" to stable 11.x.
+  # file_picker 11.x has no Android Gradle Plugin 9.0+ support: under AGP 9+
+  # its Kotlin FilePickerPlugin never compiles (11.0.1 only fixed AGP <9.0),
+  # so the Android build dies with "cannot find symbol FilePickerPlugin" in
+  # GeneratedPluginRegistrant — miguelpruivo/flutter_file_picker#1973. Only
+  # 12.0.0-beta.3+ fixed AGP 9+. 12 also raises the iOS min to 14 and win32 to
+  # ^6 (the share_plus pin below matches that win32).
+  # EXACT pin, no caret: a caret on a pre-release lets pub pull a newer beta,
+  # and file_picker's betas churn the exact params we pass — beta.4 deprecated
+  # `withData` and `allowMultiple` (both slated for removal) and we still use
+  # them. A caret could drop a beta that removes them into device_io AND every
+  # consumer unbidden. Bump this line deliberately per beta; switch to ^12.0.0
+  # when 12 ships stable (migrating off the deprecated params first).
+  file_picker: 12.0.0-beta.7
 
   # OS share sheet — REGISTRATION ONLY: code imports go through the
   # platform interface below, because this barrel's desktop impls pin
   # url_launcher_linux/windows and poison pub.dev platform attribution.
-  # Held at 12.x (win32 ^5) to resolve alongside stable file_picker 11
-  # (also win32 ^5). share_plus 13 + file_picker 12 both jump to win32 ^6,
-  # but file_picker 12 is still beta — move both up together when it ships
-  # stable, so nothing here rides a pre-release.
-  share_plus: ^12.0.2
+  # Held at 13 (win32 ^6) to match file_picker 12-beta's win32 ^6 above —
+  # the two move together when file_picker 12 ships stable.
+  share_plus: ^13.2.0
 
   # The share_plus API surface this package actually imports
-  share_plus_platform_interface: ^6.1.0
+  share_plus_platform_interface: ^7.1.0
 
   # Downloads / documents directories for silent native saves
   path_provider: ^2.1.5
