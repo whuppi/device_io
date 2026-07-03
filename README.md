@@ -89,7 +89,7 @@ Set your iOS deployment target to **14.0**. `device_io` pulls in `file_picker` 1
 
 No manifest permissions. Picking goes through the Android photo picker and the Storage Access Framework, and `saveAs` writes through the system create-document dialog — none of those need a runtime permission or a `<uses-permission>` line.
 
-One thing to check: `device_io` depends on `share_plus` 12, which sets Android build-tool floors. Your `android/` project needs **AGP ≥ 8.12.1**, **Gradle ≥ 8.13**, and **Kotlin 2.2.0**. If your app was scaffolded a while ago, bump those in `settings.gradle` / the Gradle wrapper before the first build.
+One thing to check: `device_io` pulls in `share_plus` 13 and `file_picker` 12, which set Android build-tool floors. `share_plus` 13 is the binding one, so your `android/` project needs at least **AGP 8.12.1**, **Gradle 8.13**, and **Kotlin 2.2.0** (`file_picker` 12 builds against AGP 8.5.2, under that). Newer is fine and expected: device_io's own example is CI-built on **AGP 9 / Gradle 9 / Kotlin 2.3**, the tooling current Flutter scaffolds ship. If your app was scaffolded a while ago, bump those in `settings.gradle` / the Gradle wrapper before the first build.
 
 ### macOS
 
