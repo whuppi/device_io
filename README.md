@@ -83,8 +83,6 @@ Add the usage descriptions your app actually triggers to `ios/Runner/Info.plist`
 
 Skip the keys for features you don't use — no camera capture means no `NSCameraUsageDescription`.
 
-Set your iOS deployment target to **14.0**. `device_io` pulls in `file_picker` 12, whose iOS Swift Package requires it — set `platform :ios, '14.0'` in `ios/Podfile` and `IPHONEOS_DEPLOYMENT_TARGET = 14.0` on the Runner target in Xcode. Scaffolds older than a few Flutter releases default to 13.0 and fail the build with `requires minimum platform version 14.0`.
-
 ### Android
 
 No manifest permissions. Picking goes through the Android photo picker and the Storage Access Framework, and `saveAs` writes through the system create-document dialog — none of those need a runtime permission or a `<uses-permission>` line.
