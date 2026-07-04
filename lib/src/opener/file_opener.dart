@@ -14,7 +14,7 @@ import 'package:device_io/src/types/platform_result.dart';
 /// // Open what save just wrote (native only):
 /// final saved = await deviceIO.saver.save(
 ///   bytes: bytes, fileName: 'report.pdf');
-/// if (saved case PlatformSuccess(value: final String path)) {
+/// if (saved case PlatformSuccess(value: SavedAtPath(:final path))) {
 ///   await deviceIO.opener.openPath(filePath: path);
 /// }
 /// ```
