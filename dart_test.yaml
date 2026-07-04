@@ -1,9 +1,18 @@
-# Default test target is VM. Browser tests live in test/web_runners/ and
-# run explicitly:
+# Default test target is the VM. Browser tests live in test/web_runners/ and
+# run explicitly on Chrome:
 #
-#   fvm flutter test                                  # VM suites
-#   fvm flutter test --platform chrome test/web_runners   # real Chrome
+#   fvm flutter test <vm dirs>                 # VM suites (native adapters)
+#   fvm dart test -p chrome test/web_runners   # web adapters, real Chrome
 #
-# The VM invocation lists explicit directories (see the Makefile) so the
-# web_runners files — which import package:web — are never compiled for
-# the VM.
+# Web runs use `dart test`, NOT `flutter test`. `flutter test --platform
+# chrome` boots the Flutter web engine (CanvasKit); on Windows headless Chrome
+# the canvaskit fetch fails and the suite hangs at startup
+# (flutter/flutter#162798). The web adapter tests are pure js-interop against a
+# fake browser surface — no Flutter, no dart:ui — so plain `dart test` runs
+# them on every OS. The VM invocation lists explicit directories so the
+# web_runners files, which import package:web, are never compiled for the VM.
+#
+# No `override_platforms:` / chrome settings here: flutter test runs the VM
+# suites and reads this file too, and rejects the `chrome` platform in VM mode
+# ("Unknown platform chrome"). Chrome launch flags are handled in the Makefile
+# web target instead.
