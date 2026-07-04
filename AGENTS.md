@@ -28,7 +28,7 @@ Manual edits to this file will be overwritten on the next stamp.
 
 ## What this tool does
 
-**device_io** is a cross-platform device IO package for Flutter — pick images and files, share via the OS sheet, save silently or through the system save dialog, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web: apps never branch on platform. Every operation returns a sealed `PlatformResult` — `Supported` / `Cancelled` / `Unsupported` / `Failed`, with `PermissionDenied` as a named failure carrying the caught error and stack trace. Four capability contracts (`AssetPickerAdapter`, `SharingAdapter`, `DownloadAdapter`, `FileOpenerAdapter`) sit behind one `DeviceIO` container built by `initDeviceIO`. Reads are lazy (`PickedAsset` loads nothing until asked); filesystem writes are browser-grade safe (name sanitization, atomic no-clobber numbering, `.part`-then-rename stream writes). pub.dev attributes all six platforms, guarded by the pana platform gate (`make platforms`).
+**device_io** is a cross-platform device IO package for Flutter — pick images and files, share via the OS sheet, save silently or through the system save dialog, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web: apps never branch on platform. Every operation returns a sealed `PlatformResult` — `Success` / `Cancelled` / `Unsupported` / `Failed`, with `PermissionDenied` as a named failure carrying the caught error and stack trace. Four capability contracts (`AssetPicker`, `Sharer`, `FileSaver`, `FileOpener`) sit behind one `DeviceIO` container, constructed synchronously via `DeviceIO()`. Reads are lazy (`PickedAsset` loads nothing until asked); filesystem writes are browser-grade safe (name sanitization, atomic no-clobber numbering, `.part`-then-rename stream writes). pub.dev attributes all six platforms, guarded by the pana platform gate (`make platforms`).
 
 This repo is one tool inside the **whuppi** workspace — a multi-tool monorepo. The workspace ships shared engineering standards, code conventions, brand identity, and build patterns that apply across every tool. They're documented in three layers:
 
@@ -82,7 +82,7 @@ When in doubt, read existing code in this repo and match it. Per-repo style cons
 
 ## Tool-specific notes
 
-**The stub-default conditional import is load-bearing.** `lib/src/runtime/init_device_io.dart` (and `lib/src/picker/web_file_pick.dart`) default to the STUB target: pub.dev attributes to every platform whatever the DEFAULT conditional import pulls in, so a `dart:io` default silently drops web. `make platforms` guards it.
+**The stub-default conditional import is load-bearing.** `lib/src/runtime/resolve.dart` (and `lib/src/picker/web_file_pick.dart`) default to the STUB target: pub.dev attributes to every platform whatever the DEFAULT conditional import pulls in, so a `dart:io` default silently drops web. `make platforms` guards it.
 
 **Two dependencies are registration-only — never import their Dart.** `share_plus` is reached through `share_plus_platform_interface`, and `open_filex` through its method channel — importing either package's own barrel drops desktop platforms from pub.dev attribution (their internals pin single-platform packages). The pubspec comments carry the reasoning; `make platforms` fails if this regresses.
 

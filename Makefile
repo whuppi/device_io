@@ -41,7 +41,10 @@ hooks:
 #
 # make format         Formatter in check mode — fails on unformatted files
 #                     (CI is never the first place the formatter runs).
-# make analyze        Static analysis, strict lints from analysis_options.
+# make analyze        Static analysis via the shared analyze_core.sh (canonical
+#                     in whuppi/ci, stamped into tool/) — a suppression-comment
+#                     ban + dart/flutter analyze --fatal-infos over lib, test,
+#                     tool, and example; an INFO fails like an error.
 # make analyze-floor  Resolve to the OLDEST in-range dependencies and
 #                     analyze the shipped code (lib only). The lower bounds
 #                     are only honest if the code analyzes against them,
@@ -59,7 +62,7 @@ format:
 	$(DART) format --output=none --set-exit-if-changed .
 
 analyze:
-	$(DART) analyze
+	@DART="$(DART)" FLUTTER="$(FLUTTER)" bash tool/analyze_core.sh
 
 analyze-floor:
 	@cp pubspec.lock .pubspec.lock.floor-backup
@@ -82,7 +85,7 @@ platforms:
 #                      test/web_runners/ (the VM suites must compile
 #                      without a browser target)
 #                    - dart:io outside the native-adapter suites
-#                      (test/_shared, test/download, test/sharing,
+#                      (test/_shared, test/saver, test/sharer,
 #                      test/opener — their SUBJECTS wrap dart:io)
 #                      carries an 'io-exempt: <reason>' comment
 #                    - no direct plugin imports anywhere in test/ —
@@ -131,7 +134,7 @@ test: test-unit test-web
 test-unit:
 	@echo "=== Unit: VM (types + _shared + picker + native adapters) ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/download test/sharing test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
+	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/saver test/sharer test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
 
 # Web suites run under `dart test -p chrome`, NOT flutter test: flutter test
 # boots CanvasKit, which hangs on Windows headless Chrome (flutter#162798).

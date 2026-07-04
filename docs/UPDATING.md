@@ -16,7 +16,7 @@ never trust memory or docs):
 | Pinned behavior | Where it's relied on | Verified against | Re-verify when |
 |---|---|---|---|
 | open_filex method channel: name `open_file`, method `open_file`, args `{file_path, type, uti}`, JSON result `{type, message}`, codes 0/-1/-2/-3/-4 | `opener/native/` `_openMobile` | open_filex 4.7.0 | any open_filex bump |
-| `FilePicker.saveFile` writes bytes on mobile (SAF/Files export) AND desktop (dialog then write) | `download/native/` `saveAs` | file_picker 11.0.2 | any file_picker bump |
+| `FilePicker.saveFile` writes bytes on mobile (SAF/Files export) AND desktop (dialog then write) | `saver/native/` `saveAs` | file_picker 11.0.2 | any file_picker bump |
 | image_picker permission error codes: `camera_access_denied`, `camera_access_restricted`, `photo_access_denied`, `photo_access_restricted` | picker `_permissionCodes` | image_picker platform impls (iOS + Android source) | any image_picker bump |
 | `SharePlus` is a thin delegator over `SharePlatform.instance`; desktop impls register via `registerWith` from the dependency alone | `sharing/native/` uses the platform interface | share_plus 12.0.2 | any share_plus bump |
 | share_plus barrel poisons desktop pana attribution (url_launcher_linux/windows imports) | pubspec registration-only comment | share_plus 12.0.2 | re-check on bump — if fixed upstream, the interface import can revert to the barrel |
@@ -26,10 +26,10 @@ never trust memory or docs):
 of the table needs the source check.
 
 Platform entitlements consumers must declare (verified via the example's
-macOS integration smoke): silent `saveToDevice` into `~/Downloads` needs
+macOS integration smoke): silent `save` into `~/Downloads` needs
 `com.apple.security.files.downloads.read-write`; `saveAs` and picking need
 `com.apple.security.files.user-selected.read-write`. Without the Downloads
-entitlement a sandboxed macOS app gets `PlatformFailed` from `saveToDevice`
+entitlement a sandboxed macOS app gets `PlatformFailed` from `save`
 — the package surfaces it correctly, but the README's Install section is
 the fix. iOS needs the three usage-description keys.
 
@@ -45,9 +45,9 @@ the fix. iOS needs the three usage-description keys.
    flutter_test's `test_api` pin; it moves with Flutter bumps.
 4. `make check`.
 
-## Adding a method to an existing adapter
+## Adding a method to an existing capability
 
-1. Add it to the contract (`<concern>/<concern>_adapter.dart`) with the
+1. Add it to the contract (`<concern>/<contract>.dart`) with the
    platform-behavior doc and, when the shape is new, a ```dart example.
 2. Implement in BOTH `native/` and `web/` impls (or in the single picker
    impl). A platform that genuinely can't → `PlatformUnsupported` with
@@ -59,17 +59,17 @@ the fix. iOS needs the three usage-description keys.
 5. Battery + runners cover it (VM + Chrome where reachable).
 6. Update `CAPABILITY_ROADMAP.md` row and the changelog lane.
 
-## Adding a new capability concern (fifth adapter)
+## Adding a new capability concern (fifth capability)
 
-1. New folder `lib/src/<concern>/` with `<concern>_adapter.dart` +
+1. New folder `lib/src/<concern>/` with `<contract>.dart` +
    `native/` + `web/` impls — UNLESS the backing plugins are already
    federated and the impls would only diverge in `kIsWeb`-sized branches;
    then one platform-neutral impl (the picker precedent, see
    `ARCHITECTURE.md` §4).
-2. Field on `DeviceIO` (runtime/device_io.dart) + wire all three init
+2. Field on `DeviceIO` (runtime/device_io.dart) + wire all three resolve
    files (`_native`, `_web`, `_stub` — signatures stay identical).
 3. Export the contract from the barrel's sectioned exports.
-4. New knobs go on `DeviceIOConfig`, never as loose init parameters.
+4. New knobs go on `DeviceIOConfig`, never as loose constructor parameters.
 5. Run `make platforms` — a new dependency can silently drop platforms
    (check its pubspec `flutter.plugin.platforms` and its barrel's
    imports BEFORE importing it; the registration-only pattern exists for

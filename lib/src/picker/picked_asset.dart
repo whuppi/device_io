@@ -14,7 +14,7 @@ import 'package:meta/meta.dart';
 /// final avatar = await asset.readBytes();
 ///
 /// // Large file — stream without holding it in memory:
-/// await deviceIO.download.saveStreamToDevice(
+/// await deviceIO.saver.saveStream(
 ///   byteStream: asset.readStream(),
 ///   fileName: asset.fileName ?? 'video.mp4',
 /// );
@@ -23,8 +23,9 @@ import 'package:meta/meta.dart';
 /// Laziness by source:
 /// - Native picks read from disk on demand.
 /// - Web image picks read from the browser blob on demand.
-/// - Web generic-file picks are the one eager case — the underlying file
-///   picker plugin hands over bytes, not a blob reference.
+/// - Web generic-file picks read on demand too: via File System Access
+///   where present, otherwise the file_picker plugin's own blob read. Only
+///   a multi-file pick without File System Access buffers up front.
 //
 // DESIGN NOTE — DO NOT add a filePath or bytes field here.
 //
