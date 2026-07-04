@@ -24,7 +24,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license: MIT"></a>
 </p>
 
-Pick images and files, share through the OS sheet, save to the device, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web. Every call returns a typed result instead of throwing. A cancelled picker, an unsupported platform, and a real failure come back as three distinct values — not one exception to decode, and no `kIsWeb` in your app code. Reads stay lazy: a 2GB video never lands in memory until you ask for its bytes.
+Pick images and files, share through the OS sheet, save to the device, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web.
+
+Every call returns a typed result instead of throwing. A cancelled picker, an unsupported platform, and a real failure come back as three distinct values — not one exception to decode, and no `kIsWeb` in your app code.
+
+Reads stay lazy: a 2GB video never lands in memory until you ask for its bytes.
 
 > like it? a [⭐ star](https://github.com/whuppi/device_io) or [👍 like](https://pub.dev/packages/device_io) is the entire marketing budget. [Bugs & features →](https://github.com/whuppi/device_io/issues)
 
@@ -66,7 +70,9 @@ dependencies:
   device_io:
 ```
 
-Then call `DeviceIO()` once at startup and keep the result (see [Quick start](#quick-start)). The plugins underneath are federated across all six platforms, so there's no per-platform Dart to wire up. What each platform *does* need is the permission and entitlement setup below — the OS requires it, and no package can add it for you.
+Then call `DeviceIO()` once at startup and keep the result (see [Quick start](#quick-start)). The plugins underneath are federated across all six platforms, so there's no per-platform Dart to wire up.
+
+What each platform *does* need is the permission and entitlement setup below — the OS requires it, and no package can add it for you.
 
 ### iOS
 
@@ -188,7 +194,9 @@ switch (await deviceIO.picker.pickImage()) {
 }
 ```
 
-`PlatformPermissionDenied` extends `PlatformFailed`, so a bare `case PlatformFailed()` catches it too. Put the specific arm *before* the generic one when denial deserves its own recovery; drop it and the failure arm handles everything. The value inside `PlatformSuccess` is never null.
+`PlatformPermissionDenied` extends `PlatformFailed`, so a bare `case PlatformFailed()` catches it too. Put the specific arm *before* the generic one when denial deserves its own recovery; drop it and the failure arm handles everything.
+
+The value inside `PlatformSuccess` is never null.
 
 There are deliberately no `isSupported` / `valueOrNull` / `when` shortcuts. A sealed result read through an escape hatch stops being exhaustive — and the whole point is that the compiler catches the outcome you forgot.
 
@@ -236,7 +244,11 @@ await picker.pickFile(allowedExtensions: ['mp3', 'wav']);
 await picker.pickFiles();
 ```
 
-The multi-picks never surface an empty selection — that's `PlatformCancelled`, so you never branch on `list.isEmpty`. `limit` caps the count where the platform supports it, ignored elsewhere. Resize or recompress images with `ImageOptions` (`maxWidth`, `maxHeight`, `quality`); a picked video is returned untouched.
+A few things worth knowing:
+
+- The multi-picks never surface an empty selection — that's `PlatformCancelled`, so you never branch on `list.isEmpty`.
+- `limit` caps how many the user can pick where the platform supports it, and is ignored elsewhere.
+- `ImageOptions` (`maxWidth`, `maxHeight`, `quality`) resizes and recompresses images. A picked video comes back untouched.
 
 Hide the camera button when it isn't there:
 
@@ -244,7 +256,9 @@ Hide the camera button when it isn't there:
 if (picker.isCameraSupported) showCameraButton();
 ```
 
-Camera capture runs on phones and tablets — native apps and mobile browsers alike; desktop returns `PlatformUnsupported`. For `pickMedia`, branch on the result's `mimeType` to tell an image from a video:
+Camera capture runs on phones and tablets — native apps and mobile browsers alike. Desktop returns `PlatformUnsupported`.
+
+For `pickMedia`, branch on the result's `mimeType` to tell an image from a video:
 
 ```dart
 if (result case PlatformSuccess(:final value)) {
@@ -312,7 +326,9 @@ await sharer.shareFileStream(
 );
 ```
 
-Every share method takes an optional `sharePositionOrigin` — the anchor rectangle the iPadOS share popover points at. iPad needs it (hand over your button's global bounds); every other platform ignores it. `shareFiles` throws `ArgumentError` on an empty list — a share sheet with nothing in it is a bug in the call, not a runtime state.
+Every share method takes an optional `sharePositionOrigin` — the anchor rectangle the iPadOS share popover points at. iPad needs it (hand over your button's global bounds); every other platform ignores it.
+
+`shareFiles` throws `ArgumentError` on an empty list — a share sheet with nothing in it is a bug in the call, not a runtime state.
 
 <details>
 <summary><b>🧩 what happens to a shared or opened file afterward?</b></summary>
@@ -348,9 +364,15 @@ await saver.saveAs(bytes: pdfBytes, fileName: 'report.pdf', dialogTitle: 'Save r
 await saver.saveStream(byteStream: asset.readStream(), fileName: 'video.mp4');
 ```
 
-**Before you rely on `save` on a phone:** it writes to an **app-private** folder there — invisible in the Files app, gone on uninstall. For a save the user can actually find, use `saveAs` (system dialog, public storage, no permissions). Full per-platform breakdown in [Where saves land](#where-saves-land).
+**Before you rely on `save` on a phone:** it writes to an **app-private** folder there — invisible in the Files app, gone on uninstall. For a save the user can actually find, use `saveAs` (system dialog, public storage, no permissions).
 
-Silent saves never clobber: a taken `report.pdf` becomes `report (1).pdf`, and unsafe characters in the name are sanitized out. Streaming saves write to a `.part` file that's renamed only once the stream finishes, so a failed stream leaves nothing behind. `mimeType` sets the blob type on web; native infers it from the extension.
+Full per-platform breakdown in [Where saves land](#where-saves-land).
+
+Three things the saver handles for you:
+
+- **Never clobbers** — a taken `report.pdf` becomes `report (1).pdf`, and unsafe characters in the name are sanitized out.
+- **Atomic streams** — a streaming save writes to a `.part` file, renamed only once the stream finishes; a failure leaves nothing behind.
+- **`mimeType`** — sets the blob content type on web; native infers it from the extension.
 
 ### Open
 
@@ -369,7 +391,9 @@ if (saved case PlatformSuccess(value: SavedAtPath(:final path))) {
 }
 ```
 
-`openBytes` is the cross-platform path — reach for it when you have bytes to put on screen. `openPath` takes an absolute path and returns `PlatformUnsupported` on web, where filesystem paths don't exist; feed the same bytes to `openBytes` there instead.
+`openBytes` is the cross-platform path — reach for it when you have bytes to put on screen.
+
+`openPath` takes an absolute path and returns `PlatformUnsupported` on web, where filesystem paths don't exist. Feed the same bytes to `openBytes` there instead.
 
 ---
 
@@ -391,7 +415,9 @@ switch (result) {
 }
 ```
 
-`message` is a diagnostic string, not a localized one — your app translates for its users. Permission denials arrive as `PlatformPermissionDenied` (a `PlatformFailed` subtype, see [Results](#results)) because the recovery differs: send the user to system settings, don't retry. The package maps each plugin's exact permission code to that variant, so you never string-match error text.
+`message` is a diagnostic string, not a localized one — your app translates for its users.
+
+Permission denials arrive as `PlatformPermissionDenied` (a `PlatformFailed` subtype, see [Results](#results)) because the recovery differs: send the user to system settings, don't retry. The package maps each plugin's exact permission code to that variant, so you never string-match error text.
 
 ---
 
