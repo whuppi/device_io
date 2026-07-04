@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
+import 'package:device_io/src/_shared/dom_exception.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
@@ -69,7 +70,7 @@ Future<PlatformResult<List<PickedAsset>>?> lazyWebFilePick({
     return PlatformSuccess(assets);
   } catch (e, st) {
     if (e is Error) rethrow; // Programmer bugs crash loudly.
-    if (e.toString().contains('AbortError')) {
+    if (domExceptionName(e, const ['AbortError']) != null) {
       return const PlatformCancelled(); // User dismissed the dialog.
     }
     // The dialog already opened; a failure after that is a real failure —
