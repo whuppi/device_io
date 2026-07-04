@@ -91,7 +91,14 @@ final class NativeFileOpener implements FileOpener {
       'type': mimeType,
       'uti': null,
     });
-    final result = jsonDecode(raw!) as Map<String, dynamic>;
+    // invokeMethod<String> is Future<String?> — a null response is a real
+    // outcome (old plugin, unexpected native state), not a bug to crash on.
+    // Without this guard `raw!` throws a TypeError, and the is-Error rethrow
+    // in openPath would let it escape and crash the app.
+    if (raw == null) {
+      return const PlatformFailed('File opener returned no response');
+    }
+    final result = jsonDecode(raw) as Map<String, dynamic>;
     final message = result['message'] as String? ?? '';
     return switch (result['type'] as int?) {
       0 => const PlatformSuccess(null),

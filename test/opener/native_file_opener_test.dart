@@ -11,6 +11,7 @@
 //       type -3 -> PlatformPermissionDenied(message carried)
 //       type -4 -> Failed(message carried)
 //       unknown -> Failed(message carried)
+//       null    -> Failed('File opener returned no response'), never a crash
 //   - openBytes on mobile stages a REAL file (declared bytes, sanitized name)
 //     and opens the captured file_path through the same channel.
 //
@@ -169,6 +170,19 @@ void main() {
       final r = await adapter.openPath(filePath: f.path);
       expect(r, isA<PlatformFailed<void>>());
       expect((r as PlatformFailed<void>).message, 'weird outcome');
+    }, timeout: t(3));
+
+    test('null channel response -> Failed, never crashes', () async {
+      final f = existingFile('a.pdf');
+      // invokeMethod<String> can resolve to null (old plugin, odd native
+      // state). It must surface as PlatformFailed, not a rethrown TypeError.
+      _binding.setMockMethodCallHandler(_openFileChannel, (call) async => null);
+      final r = await adapter.openPath(filePath: f.path);
+      expect(r, isA<PlatformFailed<void>>());
+      expect(
+        (r as PlatformFailed<void>).message,
+        'File opener returned no response',
+      );
     }, timeout: t(3));
 
     test('iOS routes to the same mobile channel', () async {
