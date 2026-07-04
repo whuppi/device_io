@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
+import 'package:device_io/src/_shared/dom_exception.dart';
 import 'package:device_io/src/saver/file_saver.dart';
 import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/types/mime_types.dart';
@@ -98,7 +99,7 @@ final class WebFileSaver implements FileSaver {
       return PlatformSuccess(SavedByBrowser(fileName: handle.name));
     } catch (e, st) {
       if (e is Error) rethrow;
-      if (e.toString().contains('AbortError')) {
+      if (domExceptionName(e, const ['AbortError']) != null) {
         return const PlatformCancelled();
       }
       // SecurityError (called outside a user gesture) and other dialog

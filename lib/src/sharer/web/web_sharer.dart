@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
+import 'package:device_io/src/_shared/dom_exception.dart';
 import 'package:device_io/src/sharer/share_file.dart';
 import 'package:device_io/src/sharer/share_origin.dart';
 import 'package:device_io/src/sharer/sharer.dart';
@@ -165,7 +166,11 @@ final class WebSharer implements Sharer {
       web.window.navigator.hasProperty('share'.toJS).toDart;
 
   PlatformResult<void> _mapShareError(Object e, StackTrace st, String message) {
-    final name = _domExceptionName(e);
+    final name = domExceptionName(e, const [
+      'AbortError',
+      'NotAllowedError',
+      'NotSupportedError',
+    ]);
     if (name == 'AbortError') {
       return const PlatformCancelled();
     }
@@ -184,23 +189,5 @@ final class WebSharer implements Sharer {
       );
     }
     return PlatformFailed(message, error: e, stackTrace: st);
-  }
-
-  /// Extracts the DOMException name from a rejected share() promise.
-  ///
-  /// A typed `is DOMException` check is not platform-consistent across
-  /// dart2js and dart2wasm (the analyzer flags it), so the portable check
-  /// is name matching on the error's string form — DOMException stringifies
-  /// as `Name: message` on every backend.
-  String? _domExceptionName(Object e) {
-    final text = e.toString();
-    for (final name in const [
-      'AbortError',
-      'NotAllowedError',
-      'NotSupportedError',
-    ]) {
-      if (text.contains(name)) return name;
-    }
-    return null;
   }
 }
