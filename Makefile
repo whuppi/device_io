@@ -41,7 +41,10 @@ hooks:
 #
 # make format         Formatter in check mode — fails on unformatted files
 #                     (CI is never the first place the formatter runs).
-# make analyze        Static analysis, strict lints from analysis_options.
+# make analyze        Static analysis via the shared analyze_core.sh (canonical
+#                     in whuppi/ci, stamped into tool/) — a suppression-comment
+#                     ban + dart/flutter analyze --fatal-infos over lib, test,
+#                     tool, and example; an INFO fails like an error.
 # make analyze-floor  Resolve to the OLDEST in-range dependencies and
 #                     analyze the shipped code (lib only). The lower bounds
 #                     are only honest if the code analyzes against them,
@@ -59,7 +62,7 @@ format:
 	$(DART) format --output=none --set-exit-if-changed .
 
 analyze:
-	$(DART) analyze
+	@DART="$(DART)" FLUTTER="$(FLUTTER)" bash tool/analyze_core.sh
 
 analyze-floor:
 	@cp pubspec.lock .pubspec.lock.floor-backup
