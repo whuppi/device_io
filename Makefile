@@ -133,10 +133,24 @@ test-unit:
 	@mkdir -p $(TEST_RESULTS_DIR)
 	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/download test/sharing test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
 
+# Web suites run under `dart test -p chrome`, NOT flutter test: flutter test
+# boots CanvasKit, which hangs on Windows headless Chrome (flutter#162798).
+# pdf_manipulator passes Chrome --no-sandbox via its dart_test.yaml, but
+# device_io can't: flutter test runs the native-adapter VM suites, reads that
+# same file, and rejects a chrome platform override in VM mode. So on Linux CI
+# (ubuntu 24.04's AppArmor kills Chrome's sandbox under dart test), point
+# CHROME_EXECUTABLE at a wrapper adding the same --no-sandbox flag. Windows and
+# macOS need no flag, and the CI sets CHROME_EXECUTABLE there.
 test-web:
-	@echo "=== Web adapters: real Chrome ==="
+	@echo "=== Web adapters: real Chrome (dart test -p chrome) ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) --platform chrome test/web_runners --file-reporter json:$(TEST_RESULTS_DIR)/web.json
+	@if [ "$$(uname -s)" = "Linux" ] && [ -n "$$CI" ]; then \
+	  base="$${CHROME_EXECUTABLE:-$$(command -v google-chrome-stable || command -v google-chrome || command -v chromium)}"; \
+	  printf '#!/bin/sh\nexec "%s" --no-sandbox --disable-gpu "$$@"\n' "$$base" > $(TEST_RESULTS_DIR)/chrome-ci; \
+	  chmod +x $(TEST_RESULTS_DIR)/chrome-ci; \
+	  export CHROME_EXECUTABLE="$$PWD/$(TEST_RESULTS_DIR)/chrome-ci"; \
+	fi; \
+	$(DART) test $(TIMEOUT) -p chrome test/web_runners --concurrency=1 --file-reporter json:$(TEST_RESULTS_DIR)/web.json
 
 # ═══════════════════════════════════════════════════════════════════
 # § 3b — Example tests
