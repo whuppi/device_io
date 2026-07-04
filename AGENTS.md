@@ -82,7 +82,7 @@ When in doubt, read existing code in this repo and match it. Per-repo style cons
 
 ## Tool-specific notes
 
-**The stub-default conditional import is load-bearing.** `lib/src/runtime/init_device_io.dart` (and `lib/src/picker/web_file_pick.dart`) default to the STUB target: pub.dev attributes to every platform whatever the DEFAULT conditional import pulls in, so a `dart:io` default silently drops web. `make platforms` guards it.
+**The stub-default conditional import is load-bearing.** `lib/src/runtime/resolve.dart` (and `lib/src/picker/web_file_pick.dart`) default to the STUB target: pub.dev attributes to every platform whatever the DEFAULT conditional import pulls in, so a `dart:io` default silently drops web. `make platforms` guards it.
 
 **Two dependencies are registration-only — never import their Dart.** `share_plus` is reached through `share_plus_platform_interface`, and `open_filex` through its method channel — importing either package's own barrel drops desktop platforms from pub.dev attribution (their internals pin single-platform packages). The pubspec comments carry the reasoning; `make platforms` fails if this regresses.
 
