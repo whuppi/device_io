@@ -1,35 +1,65 @@
+# Version updates only. Security fixes come from this repo's Dependabot alerts +
+# automated-security-fixes (enabled in settings), not from this file.
 version: 2
 updates:
-  # pub dependencies — root package + the example app.
-  - package-ecosystem: pub
-    directory: /
+  # pub — the root package and the example app. Grouped so a batch of bumps is
+  # a single review PR; prefixed so the title passes the conventional-commit
+  # lint (an unprefixed "Bump foo" title fails it).
+  - package-ecosystem: "pub"
+    directory: "/"
     schedule:
-      interval: weekly
-    labels: [dependencies]
-    cooldown:
-      default-days: 7
-  - package-ecosystem: pub
-    directory: /example
-    schedule:
-      interval: weekly
-    labels: [dependencies]
-    cooldown:
-      default-days: 7
-
-  # GitHub Actions — third-party action SHAs AND the whuppi/ci shared-CI pins.
-  # The whuppi-ci group bundles every whuppi/ci ref (reusable workflows +
-  # make-target + capabilities) into ONE bump PR, so a new whuppi/ci release
-  # moves them together — mixed internal versions are impossible — and that PR
-  # runs this repo's own CI before merge. Checked daily; a release must age
-  # past the cooldown before its PR opens (supply-chain safety), and the
-  # consumer still merges on its own schedule.
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: daily
-    labels: [dependencies]
-    cooldown:
-      default-days: 7
+      interval: "weekly"
+      day: "monday"
+    target-branch: "dev"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"
     groups:
+      deps:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "pub"
+    directory: "/example"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "dev"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"
+    groups:
+      deps:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "dev"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "ci"
+    groups:
+      # whuppi/ci shared-CI refs bump together in one PR, ahead of the
+      # third-party catch-all so a ci release lands as its own reviewable
+      # change tested by this repo's own CI. Order matters — a dependency
+      # joins the first group it matches.
       whuppi-ci:
-        patterns: ["whuppi/ci*"]
+        patterns:
+          - "whuppi/ci*"
+      actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
