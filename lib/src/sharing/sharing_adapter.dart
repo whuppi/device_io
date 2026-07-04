@@ -1,7 +1,7 @@
 import 'dart:typed_data';
-import 'dart:ui' show Rect;
 
 import 'package:device_io/src/sharing/share_file.dart';
+import 'package:device_io/src/sharing/share_origin.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Platform-agnostic data sharing via OS share sheet.
@@ -42,7 +42,7 @@ abstract interface class SharingAdapter {
   Future<PlatformResult<void>> shareText({
     required String text,
     String? subject,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   });
 
   /// Share a file (from bytes) via OS share sheet.
@@ -54,7 +54,7 @@ abstract interface class SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   });
 
   /// Share multiple files in a single share sheet.
@@ -67,7 +67,7 @@ abstract interface class SharingAdapter {
     required List<ShareFile> files,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   });
 
   /// Share a file from a byte stream (for large files).
@@ -83,6 +83,6 @@ abstract interface class SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   });
 }

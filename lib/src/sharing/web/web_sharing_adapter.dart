@@ -1,11 +1,11 @@
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
-import 'dart:ui' show Rect;
 
 import 'package:web/web.dart' as web;
 
 import 'package:device_io/src/sharing/share_file.dart';
+import 'package:device_io/src/sharing/share_origin.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
@@ -23,7 +23,7 @@ final class WebSharingAdapter implements SharingAdapter {
   Future<PlatformResult<void>> shareText({
     required String text,
     String? subject,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) async {
     // Feature-detect instead of calling and string-matching the TypeError.
     if (!_shareSupported) {
@@ -50,7 +50,7 @@ final class WebSharingAdapter implements SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) async {
     if (!_shareSupported) {
       return const PlatformUnsupported(
@@ -85,7 +85,7 @@ final class WebSharingAdapter implements SharingAdapter {
     required List<ShareFile> files,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) async {
     if (files.isEmpty) {
       throw ArgumentError.value(files, 'files', 'must not be empty');
@@ -127,7 +127,7 @@ final class WebSharingAdapter implements SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) async {
     // The Web Share API needs the full content up front, so the stream is
     // buffered into memory here. The interface documents this limitation.
