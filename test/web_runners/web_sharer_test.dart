@@ -1,7 +1,7 @@
-// CHARTER — this file alone proves, in a REAL browser, the WebSharingAdapter's
+// CHARTER — this file alone proves, in a REAL browser, the WebSharer's
 // behavior against an instrumented navigator.share/canShare: shareText passes
 // title (subject) + text through to the ShareData and maps a resolved share()
-// to Supported(null); shareFile/shareFiles build N File objects with the right
+// to Success(null); shareFile/shareFiles build N File objects with the right
 // names/types (one file's bytes read back via File.arrayBuffer match the
 // declared bytes); rejection name-mapping — AbortError → Cancelled,
 // NotAllowedError → PermissionDenied, an unlisted DOMException → Failed,
@@ -16,8 +16,8 @@ library;
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
-import 'package:device_io/src/sharing/share_file.dart';
-import 'package:device_io/src/sharing/web/web_sharing_adapter.dart';
+import 'package:device_io/src/sharer/share_file.dart';
+import 'package:device_io/src/sharer/web/web_sharer.dart';
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
@@ -27,7 +27,7 @@ import '../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {
-  final adapter = WebSharingAdapter();
+  final adapter = WebSharer();
   final overrides = <PropOverride>[];
 
   // What an instrumented navigator.share recorded.
@@ -68,7 +68,7 @@ void main() {
   // ── shareText: title + text pass-through ──
 
   test(
-    'shareText passes subject as title and text through → Supported',
+    'shareText passes subject as title and text through → Success',
     () async {
       installShare();
       final result = await adapter.shareText(
@@ -76,7 +76,7 @@ void main() {
         subject: 'the title',
       );
 
-      expect(result, isA<PlatformSupported<void>>());
+      expect(result, isA<PlatformSuccess<void>>());
       expect(recorded, isNotNull);
       expect(readString(recorded! as JSObject, 'title'), 'the title');
       expect(readString(recorded! as JSObject, 'text'), 'hello body');
@@ -98,7 +98,7 @@ void main() {
         subject: 'two files',
       );
 
-      expect(result, isA<PlatformSupported<void>>());
+      expect(result, isA<PlatformSuccess<void>>());
       final files = (recorded! as JSObject)
           .getProperty<JSArray<web.File>>('files'.toJS)
           .toDart;
@@ -124,7 +124,7 @@ void main() {
       text: 'see attached',
     );
 
-    expect(result, isA<PlatformSupported<void>>());
+    expect(result, isA<PlatformSuccess<void>>());
     final files = (recorded! as JSObject)
         .getProperty<JSArray<web.File>>('files'.toJS)
         .toDart;
@@ -203,7 +203,7 @@ void main() {
         fileName: 'clip.mp4',
       );
 
-      expect(result, isA<PlatformSupported<void>>());
+      expect(result, isA<PlatformSuccess<void>>());
       final files = (recorded! as JSObject)
           .getProperty<JSArray<web.File>>('files'.toJS)
           .toDart;

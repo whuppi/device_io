@@ -1,20 +1,20 @@
 import 'dart:typed_data';
 
-import 'package:device_io/src/sharing/share_file.dart';
-import 'package:device_io/src/sharing/share_origin.dart';
+import 'package:device_io/src/sharer/share_file.dart';
+import 'package:device_io/src/sharer/share_origin.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Platform-agnostic data sharing via OS share sheet.
 ///
 /// ```dart
-/// await deviceIO.sharing.shareFile(
+/// await deviceIO.sharer.shareFile(
 ///   bytes: pngBytes,
 ///   fileName: 'photo.png',
 ///   text: 'Look at this!',
 /// );
 ///
 /// // Several files in one sheet:
-/// await deviceIO.sharing.shareFiles(
+/// await deviceIO.sharer.shareFiles(
 ///   files: [
 ///     ShareFile(bytes: pngBytes, fileName: 'chart.png'),
 ///     ShareFile(bytes: csvBytes, fileName: 'data.csv'),
@@ -31,11 +31,11 @@ import 'package:device_io/src/types/platform_result.dart';
 /// popover anchoring (web ignores it entirely).
 ///
 /// Implementations:
-/// - `NativeSharingAdapter` — wraps share_plus (mobile/desktop)
-/// - `WebSharingAdapter` — Web Share API (web)
+/// - `NativeSharer` — wraps share_plus (mobile/desktop)
+/// - `WebSharer` — Web Share API (web)
 ///
 /// A dismissed share sheet returns [PlatformCancelled].
-abstract interface class SharingAdapter {
+abstract interface class Sharer {
   /// Share text content via OS share sheet.
   ///
   /// See the class doc for [sharePositionOrigin].

@@ -1,11 +1,11 @@
-// CHARTER — this file alone proves the NativeFileOpenerAdapter's MOBILE
+// CHARTER — this file alone proves the NativeFileOpener's MOBILE
 // protocol against the open_filex method channel (the pinned-protocol
 // watchlist row in docs/UPDATING.md):
 //   - openPath on Android/iOS sends method 'open_file' with the EXACT map
 //     {file_path, type, uti} — path passed through, type = provided mimeType
 //     or null, uti always null;
 //   - the plugin's JSON reply maps, table-driven, to typed results:
-//       type 0  -> Supported(null)
+//       type 0  -> Success(null)
 //       type -1 -> Failed('No app available to open this file type')
 //       type -2 -> Failed('File not found: <path>')
 //       type -3 -> PlatformPermissionDenied(message carried)
@@ -42,7 +42,7 @@ import 'package:flutter/services.dart' show MethodCall, MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
-import 'package:device_io/src/opener/native/native_file_opener_adapter.dart';
+import 'package:device_io/src/opener/native/native_file_opener.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 import '../harness/bytes.dart';
@@ -72,7 +72,7 @@ void main() {
     if (root.existsSync()) root.deleteSync(recursive: true);
   });
 
-  final adapter = NativeFileOpenerAdapter();
+  final adapter = NativeFileOpener();
 
   // Scripts the channel to reply with the given open_filex code + message,
   // recording the outgoing MethodCall.
@@ -118,11 +118,11 @@ void main() {
   });
 
   group('openPath result mapping (table-driven)', () {
-    test('type 0 -> Supported(null)', () async {
+    test('type 0 -> Success(null)', () async {
       final f = existingFile('a.pdf');
       reply(type: 0);
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformSupported<void>>());
+      expect(r, isA<PlatformSuccess<void>>());
     }, timeout: t(3));
 
     test('type -1 -> Failed(no app)', () async {
@@ -176,7 +176,7 @@ void main() {
       final f = existingFile('a.pdf');
       reply(type: 0);
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformSupported<void>>());
+      expect(r, isA<PlatformSuccess<void>>());
       expect(lastCall!.method, 'open_file');
     }, timeout: t(3));
   });
@@ -189,7 +189,7 @@ void main() {
       fileName: 'my:doc.pdf', // ':' -> '_' on sanitize
     );
 
-    expect(r, isA<PlatformSupported<void>>());
+    expect(r, isA<PlatformSuccess<void>>());
     expect(lastCall, isNotNull);
     final stagedPath = (lastCall!.arguments as Map)['file_path'] as String;
 

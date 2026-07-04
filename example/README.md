@@ -58,10 +58,10 @@ Four tabs, one per API surface:
 
 | Tab | API | What it covers |
 |---|---|---|
-| **Pick** | `assetPicker` | Gallery images (single + multi), camera capture, videos, mixed media, generic files. Picked assets are lazy — bytes are read on tap, never at pick time. |
-| **Share** | `sharing` | Text, a single file, multiple files in one sheet, and a ~1MB byte stream. |
-| **Save** | `download` | Silent save to downloads, a streamed save, and the user-picks-destination system dialog. |
-| **Open** | `fileOpener` | In-memory bytes in the default viewer, and the last silently-saved path. |
+| **Pick** | `picker` | Gallery images (single + multi), camera capture, videos, mixed media, generic files. Picked assets are lazy — bytes are read on tap, never at pick time. |
+| **Share** | `sharer` | Text, a single file, multiple files in one sheet, and a ~1MB byte stream. |
+| **Save** | `saver` | Silent save to downloads, a streamed save, and the user-picks-destination system dialog. |
+| **Open** | `opener` | In-memory bytes in the default viewer, and the last silently-saved path. |
 
 Every call returns a sealed `PlatformResult`; one renderer switches the
 family exhaustively and writes the outcome into the activity log, which

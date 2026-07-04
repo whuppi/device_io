@@ -7,14 +7,14 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/services.dart' show MethodChannel;
 
 import 'package:device_io/src/_shared/native_fs.dart';
-import 'package:device_io/src/opener/file_opener_adapter.dart';
+import 'package:device_io/src/opener/file_opener.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Native (mobile/desktop) file opener using the OS default app.
 ///
 /// - macOS: `open <path>` · Linux: `xdg-open <path>` · Windows: `start`
 /// - iOS/Android: open_filex (content-URI aware, permission mapped)
-final class NativeFileOpenerAdapter implements FileOpenerAdapter {
+final class NativeFileOpener implements FileOpener {
   @override
   Future<PlatformResult<void>> openBytes({
     required Uint8List bytes,
@@ -94,7 +94,7 @@ final class NativeFileOpenerAdapter implements FileOpenerAdapter {
     final result = jsonDecode(raw!) as Map<String, dynamic>;
     final message = result['message'] as String? ?? '';
     return switch (result['type'] as int?) {
-      0 => const PlatformSupported(null),
+      0 => const PlatformSuccess(null),
       -1 => const PlatformFailed('No app available to open this file type'),
       -2 => PlatformFailed('File not found: $filePath'),
       -3 => PlatformPermissionDenied(message: message),
@@ -114,6 +114,6 @@ final class NativeFileOpenerAdapter implements FileOpenerAdapter {
         '${stderr.isEmpty ? '' : ': $stderr'})',
       );
     }
-    return const PlatformSupported(null);
+    return const PlatformSuccess(null);
   }
 }

@@ -14,7 +14,7 @@ import 'package:meta/meta.dart';
 /// final avatar = await asset.readBytes();
 ///
 /// // Large file — stream without holding it in memory:
-/// await deviceIO.download.saveStreamToDevice(
+/// await deviceIO.saver.saveStream(
 ///   byteStream: asset.readStream(),
 ///   fileName: asset.fileName ?? 'video.mp4',
 /// );

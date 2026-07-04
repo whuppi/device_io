@@ -4,9 +4,9 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-import 'package:device_io/src/sharing/share_file.dart';
-import 'package:device_io/src/sharing/share_origin.dart';
-import 'package:device_io/src/sharing/sharing_adapter.dart';
+import 'package:device_io/src/sharer/share_file.dart';
+import 'package:device_io/src/sharer/share_origin.dart';
+import 'package:device_io/src/sharer/sharer.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
@@ -14,7 +14,7 @@ import 'package:device_io/src/types/platform_result.dart';
 ///
 /// Returns [PlatformUnsupported] when the browser doesn't support sharing,
 /// [PlatformCancelled] when the user dismisses the share dialog.
-final class WebSharingAdapter implements SharingAdapter {
+final class WebSharer implements Sharer {
   // sharePositionOrigin is the iPadOS popover anchor — the web share
   // dialog has no popover to anchor, so every method accepts it and
   // ignores it.
@@ -36,7 +36,7 @@ final class WebSharingAdapter implements SharingAdapter {
       if (subject != null) data.title = subject;
 
       await web.window.navigator.share(data).toDart;
-      return const PlatformSupported(null);
+      return const PlatformSuccess(null);
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
       return _mapShareError(e, st, 'Failed to share text');
@@ -73,7 +73,7 @@ final class WebSharingAdapter implements SharingAdapter {
       }
 
       await web.window.navigator.share(data).toDart;
-      return const PlatformSupported(null);
+      return const PlatformSuccess(null);
     } catch (e, st) {
       if (e is Error) rethrow;
       return _mapShareError(e, st, 'Failed to share "$fileName"');
@@ -113,7 +113,7 @@ final class WebSharingAdapter implements SharingAdapter {
       }
 
       await web.window.navigator.share(data).toDart;
-      return const PlatformSupported(null);
+      return const PlatformSuccess(null);
     } catch (e, st) {
       if (e is Error) rethrow;
       return _mapShareError(e, st, 'Failed to share ${files.length} files');

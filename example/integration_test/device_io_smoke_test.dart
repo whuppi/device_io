@@ -1,6 +1,6 @@
 // Integration smoke — the programmatic surfaces against REAL plugins on a
 // real target (macOS/iOS/Android/Windows/Linux devices, or Chrome via
-// flutter drive). What it proves: initDeviceIO resolves the right adapter
+// flutter drive). What it proves: DeviceIO resolves the right adapter
 // set; silent saves write real bytes to the real filesystem with the
 // no-clobber contract (native), or trigger the download path (web);
 // streamed saves arrive complete; PickedAsset round-trips.
@@ -25,46 +25,45 @@ void main() {
   late DeviceIO deviceIO;
 
   setUpAll(() async {
-    deviceIO = await initDeviceIO(
-      config: const DeviceIOConfig(downloadSubfolder: 'DeviceIOSmoke'),
+    deviceIO = DeviceIO(
+      config: const DeviceIOConfig(downloadsSubfolder: 'DeviceIOSmoke'),
     );
   });
 
-  test(
-    'saveToDevice writes real bytes; second save numbers the name',
-    () async {
-      final stamp = DateTime.now().microsecondsSinceEpoch;
-      final name = 'smoke_$stamp.txt';
-      const body = 'device_io smoke — real save';
+  test('save writes real bytes; second save numbers the name', () async {
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final name = 'smoke_$stamp.txt';
+    const body = 'device_io smoke — real save';
 
-      final first = await deviceIO.download.saveToDevice(
-        bytes: Uint8List.fromList(utf8.encode(body)),
-        fileName: name,
-      );
-      expect(first, isA<PlatformSupported<String?>>());
-      final firstPath = (first as PlatformSupported<String?>).value;
+    final first = await deviceIO.saver.save(
+      bytes: Uint8List.fromList(utf8.encode(body)),
+      fileName: name,
+    );
+    expect(first, isA<PlatformSuccess<SaveLocation>>());
+    final firstLoc = (first as PlatformSuccess<SaveLocation>).value;
 
-      if (kIsWeb) {
-        // A browser download has no observable path.
-        expect(firstPath, isNull);
-        return;
-      }
+    if (kIsWeb) {
+      // A browser download has no observable path.
+      expect(firstLoc, isA<SavedByBrowser>());
+      return;
+    }
 
-      expect(firstPath, isNotNull);
-      expect(File(firstPath!).readAsStringSync(), body);
+    expect(firstLoc, isA<SavedAtPath>());
+    final firstPath = (firstLoc as SavedAtPath).path;
+    expect(File(firstPath).readAsStringSync(), body);
 
-      final second = await deviceIO.download.saveToDevice(
-        bytes: Uint8List.fromList(utf8.encode(body)),
-        fileName: name,
-      );
-      final secondPath = (second as PlatformSupported<String?>).value!;
-      expect(secondPath, isNot(firstPath));
-      expect(secondPath, contains('(1)'));
-      expect(File(secondPath).readAsStringSync(), body);
-    },
-  );
+    final second = await deviceIO.saver.save(
+      bytes: Uint8List.fromList(utf8.encode(body)),
+      fileName: name,
+    );
+    final secondPath =
+        ((second as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+    expect(secondPath, isNot(firstPath));
+    expect(secondPath, contains('(1)'));
+    expect(File(secondPath).readAsStringSync(), body);
+  });
 
-  test('saveStreamToDevice lands the complete patterned stream', () async {
+  test('saveStream lands the complete patterned stream', () async {
     const total = 300 * 1024;
     Stream<List<int>> chunks() async* {
       var offset = 0;
@@ -76,15 +75,16 @@ void main() {
       }
     }
 
-    final result = await deviceIO.download.saveStreamToDevice(
+    final result = await deviceIO.saver.saveStream(
       byteStream: chunks(),
       fileName: 'smoke_stream_${DateTime.now().microsecondsSinceEpoch}.bin',
     );
-    expect(result, isA<PlatformSupported<String?>>());
+    expect(result, isA<PlatformSuccess<SaveLocation>>());
 
     if (kIsWeb) return; // Buffered download; no path to read back.
 
-    final path = (result as PlatformSupported<String?>).value!;
+    final path =
+        ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
     final bytes = File(path).readAsBytesSync();
     expect(bytes.length, total);
     for (var i = 0; i < bytes.length; i++) {

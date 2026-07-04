@@ -1,7 +1,7 @@
-// CHARTER — this file alone proves, in a REAL browser, the WebFileOpenerAdapter's
+// CHARTER — this file alone proves, in a REAL browser, the WebFileOpener's
 // behavior against an instrumented window.open + URL.createObjectURL: openBytes
 // calls window.open with a `blob:` URL and the '_blank' target and, when the
-// returned window is non-null, maps to Supported(null); when window.open returns
+// returned window is non-null, maps to Success(null); when window.open returns
 // null (popup blocked), it revokes the URL and returns the documented
 // PlatformFailed; openPath is always Unsupported on web (no override needed).
 // Diet: declared byte fixtures from ../harness/bytes.dart; inline literals here.
@@ -10,7 +10,7 @@ library;
 
 import 'dart:js_interop';
 
-import 'package:device_io/src/opener/web/web_file_opener_adapter.dart';
+import 'package:device_io/src/opener/web/web_file_opener.dart';
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:test/test.dart';
 
@@ -19,7 +19,7 @@ import '../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {
-  final adapter = WebFileOpenerAdapter();
+  final adapter = WebFileOpener();
   final overrides = <PropOverride>[];
 
   String? openedUrl;
@@ -55,14 +55,14 @@ void main() {
     overrides.clear();
   });
 
-  test('openBytes opens a blob: URL in _blank and returns Supported', () async {
+  test('openBytes opens a blob: URL in _blank and returns Success', () async {
     install(win: JSObject()); // non-null fake window
     final result = await adapter.openBytes(
       bytes: utf8SampleBytes,
       fileName: 'doc.pdf',
     );
 
-    expect(result, isA<PlatformSupported<void>>());
+    expect(result, isA<PlatformSuccess<void>>());
     expect(openedUrl, 'blob:opener-fake');
     expect(openedTarget, '_blank');
   }, timeout: t(4));

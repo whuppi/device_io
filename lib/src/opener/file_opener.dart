@@ -9,21 +9,21 @@ import 'package:device_io/src/types/platform_result.dart';
 ///
 /// ```dart
 /// // Works on every platform (web opens a new tab):
-/// await deviceIO.fileOpener.openBytes(bytes: pdfBytes, fileName: 'doc.pdf');
+/// await deviceIO.opener.openBytes(bytes: pdfBytes, fileName: 'doc.pdf');
 ///
-/// // Open what saveToDevice just wrote (native only):
-/// final saved = await deviceIO.download.saveToDevice(
+/// // Open what save just wrote (native only):
+/// final saved = await deviceIO.saver.save(
 ///   bytes: bytes, fileName: 'report.pdf');
-/// if (saved case PlatformSupported(value: final String path)) {
-///   await deviceIO.fileOpener.openPath(filePath: path);
+/// if (saved case PlatformSuccess(value: final String path)) {
+///   await deviceIO.opener.openPath(filePath: path);
 /// }
 /// ```
 ///
 /// Implementations:
-/// - `NativeFileOpenerAdapter` — OS open command / open_filex
+/// - `NativeFileOpener` — OS open command / open_filex
 ///   (mobile/desktop)
-/// - `WebFileOpenerAdapter` — blob URL in a new tab (web)
-abstract interface class FileOpenerAdapter {
+/// - `WebFileOpener` — blob URL in a new tab (web)
+abstract interface class FileOpener {
   /// Open in-memory content in the platform's default viewer.
   ///
   /// Works on every platform: native stages the bytes to a temporary file
@@ -39,7 +39,7 @@ abstract interface class FileOpenerAdapter {
 
   /// Open a file at the given absolute path in the OS default app.
   ///
-  /// Pairs with the path returned by `DownloadAdapter.saveToDevice` —
+  /// Pairs with the path returned by `FileSaver.save` —
   /// open what was just saved without re-reading it.
   ///
   /// [mimeType] is optional — the OS infers the app from the file extension.

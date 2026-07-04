@@ -2,7 +2,7 @@
 // example app builds and lays out without overflow; all four capability
 // tabs are present and switchable; each tab shows its key action buttons;
 // and the global activity log renders below the tabs on every one.
-// Diet: the real app widget over a real initDeviceIO(); no plugin edges
+// Diet: the real app widget over a real DeviceIO(); no plugin edges
 // are reached (structure only, nothing tapped that calls a plugin).
 
 import 'package:device_io/device_io.dart';
@@ -17,7 +17,7 @@ void main() {
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    deviceIO = await initDeviceIO();
+    deviceIO = DeviceIO();
   });
 
   for (final profile in deviceProfiles) {
@@ -38,7 +38,7 @@ void main() {
       const perTab = {
         'Pick': ['pickImage', 'pickImages', 'pickFiles'],
         'Share': ['shareText', 'shareFiles (CSV + text)'],
-        'Save': ['saveToDevice (CSV)', 'saveAs'],
+        'Save': ['save (CSV)', 'saveAs'],
         'Open': ['openBytes', 'openPath (last saved)'],
       };
       for (final entry in perTab.entries) {

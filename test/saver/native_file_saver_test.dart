@@ -1,17 +1,17 @@
-// CHARTER — this file alone proves the NativeDownloadAdapter's on-disk
+// CHARTER — this file alone proves the NativeFileSaver's on-disk
 // contract:
-//   - saveToDevice writes the EXACT declared bytes to a file INSIDE the
+//   - save writes the EXACT declared bytes to a file INSIDE the
 //     downloads directory, under a sanitized name that cannot escape it;
 //   - a second save of the same name never clobbers the first — both files
 //     survive with intact contents, the second numbered "(1)";
-//   - appSubfolder is created and used;
+//   - downloadsSubfolder is created and used;
 //   - a null downloads path falls back to the documents directory;
-//   - saveStreamToDevice reassembles a multi-chunk patterned stream byte-for
+//   - saveStream reassembles a multi-chunk patterned stream byte-for
 //     -byte and leaves NO `.part` sibling behind (browser two-phase write);
 //   - a FAILING stream leaves NEITHER a `.part` file NOR the reserved final
 //     name with partial content — the placeholder is cleaned too;
 //   - saveAs maps the file_picker `save` method-channel result: null ->
-//     Cancelled, a path -> Supported(path), the outgoing fileName argument is
+//     Cancelled, a path -> Success(SavedAtPath), the outgoing fileName argument is
 //     SANITIZED, a PlatformException -> Failed carrying it;
 //   - an Error thrown from the path provider is RETHROWN, not wrapped.
 //
@@ -27,7 +27,7 @@
 // FilePicker.saveFile without importing the plugin.
 //
 // Diet: dart:io here is legitimate — the SUBJECT wraps dart:io, and this suite
-// lives under test/download/ (not a dart:io-guarded directory). No plugin
+// lives under test/saver/ (not a dart:io-guarded directory). No plugin
 // barrels: file_picker is reached through its method channel, path_provider
 // through the platform-interface fake.
 
@@ -40,7 +40,8 @@ import 'package:flutter/services.dart'
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
-import 'package:device_io/src/download/native/native_download_adapter.dart';
+import 'package:device_io/src/saver/native/native_file_saver.dart';
+import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 import '../harness/bytes.dart';
@@ -81,19 +82,21 @@ void main() {
     if (root.existsSync()) root.deleteSync(recursive: true);
   });
 
-  final adapter = NativeDownloadAdapter();
+  final adapter = NativeFileSaver();
 
-  group('saveToDevice', () {
+  group('save', () {
     test(
       'writes exact declared bytes inside the downloads directory',
       () async {
-        final result = await adapter.saveToDevice(
+        final result = await adapter.save(
           bytes: utf8SampleBytes,
           fileName: 'export.txt',
         );
 
-        expect(result, isA<PlatformSupported<String?>>());
-        final path = (result as PlatformSupported<String?>).value!;
+        expect(result, isA<PlatformSuccess<SaveLocation>>());
+        final path =
+            ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath)
+                .path;
         expect(path, '${downloads.path}/export.txt');
 
         final onDisk = File(path);
@@ -107,12 +110,13 @@ void main() {
     test('sanitizes a traversal name into the downloads dir', () async {
       // '../esc:ape.txt' -> '/' and ':' become '_' -> no separator remains,
       // so the file is a plain child of downloads, not an escape.
-      final result = await adapter.saveToDevice(
+      final result = await adapter.save(
         bytes: utf8SampleBytes,
         fileName: '../esc:ape.txt',
       );
 
-      final path = (result as PlatformSupported<String?>).value!;
+      final path =
+          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${downloads.path}/.._esc_ape.txt');
       final onDisk = File(path);
       expect(onDisk.existsSync(), isTrue);
@@ -122,17 +126,16 @@ void main() {
     test('never clobbers: second same-name save numbers "(1)"', () async {
       final second = patternedBytes(100);
 
-      final r1 = await adapter.saveToDevice(
+      final r1 = await adapter.save(
         bytes: utf8SampleBytes,
         fileName: 'report.txt',
       );
-      final r2 = await adapter.saveToDevice(
-        bytes: second,
-        fileName: 'report.txt',
-      );
+      final r2 = await adapter.save(bytes: second, fileName: 'report.txt');
 
-      final p1 = (r1 as PlatformSupported<String?>).value!;
-      final p2 = (r2 as PlatformSupported<String?>).value!;
+      final p1 =
+          ((r1 as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+      final p2 =
+          ((r2 as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
       expect(p1, '${downloads.path}/report.txt');
       expect(p2, '${downloads.path}/report (1).txt');
 
@@ -140,15 +143,16 @@ void main() {
       expect(Uint8List.fromList(File(p2).readAsBytesSync()), second);
     }, timeout: t(3));
 
-    test('appSubfolder is created and used', () async {
-      final scoped = NativeDownloadAdapter(appSubfolder: 'MyApp');
+    test('downloadsSubfolder is created and used', () async {
+      final scoped = NativeFileSaver(downloadsSubfolder: 'MyApp');
 
-      final result = await scoped.saveToDevice(
+      final result = await scoped.save(
         bytes: utf8SampleBytes,
         fileName: 'note.txt',
       );
 
-      final path = (result as PlatformSupported<String?>).value!;
+      final path =
+          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${downloads.path}/MyApp/note.txt');
       final onDisk = File(path);
       expect(onDisk.existsSync(), isTrue);
@@ -159,28 +163,30 @@ void main() {
     test('null downloads path falls back to documents', () async {
       provider.downloadsPath = null;
 
-      final result = await adapter.saveToDevice(
+      final result = await adapter.save(
         bytes: utf8SampleBytes,
         fileName: 'fallback.txt',
       );
 
-      final path = (result as PlatformSupported<String?>).value!;
+      final path =
+          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${documents.path}/fallback.txt');
       expect(File(path).parent.path, documents.path);
       expect(Uint8List.fromList(File(path).readAsBytesSync()), utf8SampleBytes);
     }, timeout: t(3));
   });
 
-  group('saveStreamToDevice', () {
+  group('saveStream', () {
     test('reassembles a multi-chunk patterned stream, no .part left', () async {
       final full = patternedBytes(300 * 1024);
 
-      final result = await adapter.saveStreamToDevice(
+      final result = await adapter.saveStream(
         byteStream: _unevenChunks(full),
         fileName: 'stream.bin',
       );
 
-      final path = (result as PlatformSupported<String?>).value!;
+      final path =
+          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${downloads.path}/stream.bin');
 
       final onDisk = Uint8List.fromList(File(path).readAsBytesSync());
@@ -199,12 +205,12 @@ void main() {
     test(
       'failing stream leaves NEITHER a .part NOR the reserved name',
       () async {
-        final result = await adapter.saveStreamToDevice(
+        final result = await adapter.saveStream(
           byteStream: _failingStream(),
           fileName: 'stream.bin',
         );
 
-        expect(result, isA<PlatformFailed<String?>>());
+        expect(result, isA<PlatformFailed<SaveLocation>>());
 
         // The reserved placeholder was cleaned, and no `.part` remains — the
         // directory holds no trace of the aborted write.
@@ -225,10 +231,10 @@ void main() {
         fileName: 'report.pdf',
       );
 
-      expect(result, isA<PlatformCancelled<String?>>());
+      expect(result, isA<PlatformCancelled<SaveLocation>>());
     }, timeout: t(3));
 
-    test('a path -> Supported(path)', () async {
+    test('a path -> Success(SavedAtPath)', () async {
       _mockSave((call) => '/chosen/report.pdf');
 
       final result = await adapter.saveAs(
@@ -236,9 +242,9 @@ void main() {
         fileName: 'report.pdf',
       );
 
-      expect(result, isA<PlatformSupported<String?>>());
+      expect(result, isA<PlatformSuccess<SaveLocation>>());
       expect(
-        (result as PlatformSupported<String?>).value,
+        ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path,
         '/chosen/report.pdf',
       );
     }, timeout: t(3));
@@ -270,8 +276,8 @@ void main() {
         fileName: 'report.pdf',
       );
 
-      expect(result, isA<PlatformFailed<String?>>());
-      final failed = result as PlatformFailed<String?>;
+      expect(result, isA<PlatformFailed<SaveLocation>>());
+      final failed = result as PlatformFailed<SaveLocation>;
       expect(failed.error, isA<PlatformException>());
       expect((failed.error! as PlatformException).code, 'io');
     }, timeout: t(3));
@@ -281,7 +287,7 @@ void main() {
     provider.downloadsError = StateError('provider exploded');
 
     await expectLater(
-      adapter.saveToDevice(bytes: utf8SampleBytes, fileName: 'x.txt'),
+      adapter.save(bytes: utf8SampleBytes, fileName: 'x.txt'),
       throwsA(isA<StateError>()),
     );
   }, timeout: t(3));

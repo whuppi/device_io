@@ -5,7 +5,8 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-import 'package:device_io/src/download/download_adapter.dart';
+import 'package:device_io/src/saver/file_saver.dart';
+import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
@@ -22,21 +23,21 @@ extension type _SaveFilePickerOptions._(JSObject _) implements JSObject {
   external factory _SaveFilePickerOptions({String suggestedName});
 }
 
-/// Web download adapter.
+/// Web file saver.
 ///
 /// Silent saves trigger a browser download via blob URL + anchor click.
 /// [saveAs] uses the real save dialog where the browser has one
 /// (File System Access API on Chromium), falling back to a download.
-final class WebDownloadAdapter implements DownloadAdapter {
+final class WebFileSaver implements FileSaver {
   @override
-  Future<PlatformResult<String?>> saveToDevice({
+  Future<PlatformResult<SaveLocation>> save({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
   }) async {
     try {
       _triggerDownload(bytes, fileName, mimeType);
-      return const PlatformSupported(null); // No file path on web.
+      return const PlatformSuccess(SavedByBrowser());
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
       return PlatformFailed(
@@ -48,7 +49,7 @@ final class WebDownloadAdapter implements DownloadAdapter {
   }
 
   @override
-  Future<PlatformResult<String?>> saveStreamToDevice({
+  Future<PlatformResult<SaveLocation>> saveStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -63,7 +64,7 @@ final class WebDownloadAdapter implements DownloadAdapter {
         builder.add(chunk);
       }
       _triggerDownload(builder.takeBytes(), fileName, mimeType);
-      return const PlatformSupported(null);
+      return const PlatformSuccess(SavedByBrowser());
     } catch (e, st) {
       if (e is Error) rethrow;
       return PlatformFailed(
@@ -75,7 +76,7 @@ final class WebDownloadAdapter implements DownloadAdapter {
   }
 
   @override
-  Future<PlatformResult<String?>> saveAs({
+  Future<PlatformResult<SaveLocation>> saveAs({
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
@@ -85,7 +86,7 @@ final class WebDownloadAdapter implements DownloadAdapter {
     if (!_savePickerSupported) {
       // No File System Access API (Firefox, Safari): a browser download IS
       // the user-visible save on those browsers.
-      return saveToDevice(bytes: bytes, fileName: fileName, mimeType: mimeType);
+      return save(bytes: bytes, fileName: fileName, mimeType: mimeType);
     }
     try {
       final handle = await _showSaveFilePicker(
@@ -94,7 +95,7 @@ final class WebDownloadAdapter implements DownloadAdapter {
       final writable = await handle.createWritable().toDart;
       await writable.write(bytes.toJS).toDart;
       await writable.close().toDart;
-      return PlatformSupported(handle.name);
+      return PlatformSuccess(SavedByBrowser(fileName: handle.name));
     } catch (e, st) {
       if (e is Error) rethrow;
       if (e.toString().contains('AbortError')) {
@@ -102,13 +103,13 @@ final class WebDownloadAdapter implements DownloadAdapter {
       }
       // SecurityError (called outside a user gesture) and other dialog
       // failures: the save should still succeed — fall back to a download.
-      final fallback = await saveToDevice(
+      final fallback = await save(
         bytes: bytes,
         fileName: fileName,
         mimeType: mimeType,
       );
       return switch (fallback) {
-        PlatformSupported() => fallback,
+        PlatformSuccess() => fallback,
         _ => PlatformFailed(
           'Failed to save "$fileName"',
           error: e,

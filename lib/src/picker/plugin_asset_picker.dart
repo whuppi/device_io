@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:image_picker/image_picker.dart';
 
-import 'package:device_io/src/picker/asset_picker_adapter.dart';
+import 'package:device_io/src/picker/asset_picker.dart';
+import 'package:device_io/src/picker/image_options.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/picker/web_file_pick.dart';
 import 'package:device_io/src/types/mime_types.dart';
@@ -25,7 +26,7 @@ import 'package:device_io/src/types/platform_result.dart';
 //     conditional export in web_file_pick.dart, not in this file.
 // The other capabilities keep their native/web adapter pairs because they
 // genuinely bind platform APIs.
-final class PluginAssetPickerAdapter implements AssetPickerAdapter {
+final class PluginAssetPicker implements AssetPicker {
   final _picker = ImagePicker();
 
   /// Camera capture works wherever the device is a phone/tablet — native
@@ -43,37 +44,28 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
 
   @override
   Future<PlatformResult<PickedAsset>> pickImage({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
   }) async {
-    return _pickFromSource(
-      ImageSource.gallery,
-      maxWidth: maxWidth,
-      maxHeight: maxHeight,
-      imageQuality: imageQuality,
-    );
+    return _pickFromSource(ImageSource.gallery, options: options);
   }
 
   @override
   Future<PlatformResult<List<PickedAsset>>> pickImages({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
     int? limit,
   }) async {
     try {
       final xFiles = await _picker.pickMultiImage(
-        maxWidth: maxWidth?.toDouble(),
-        maxHeight: maxHeight?.toDouble(),
-        imageQuality: imageQuality,
+        maxWidth: options.maxWidth?.toDouble(),
+        maxHeight: options.maxHeight?.toDouble(),
+        imageQuality: options.quality,
         limit: limit,
       );
 
       if (xFiles.isEmpty) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(xFiles.map(_fromXFile).toList());
+      return PlatformSuccess(xFiles.map(_fromXFile).toList());
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick images');
     } catch (e, st) {
@@ -84,9 +76,7 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
 
   @override
   Future<PlatformResult<PickedAsset>> captureImage({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
   }) async {
     if (!isCameraSupported) {
       return const PlatformUnsupported(
@@ -94,12 +84,7 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
         '(desktop has no camera integration)',
       );
     }
-    return _pickFromSource(
-      ImageSource.camera,
-      maxWidth: maxWidth,
-      maxHeight: maxHeight,
-      imageQuality: imageQuality,
-    );
+    return _pickFromSource(ImageSource.camera, options: options);
   }
 
   // ── Video + mixed media ──
@@ -124,21 +109,19 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
 
   @override
   Future<PlatformResult<PickedAsset>> pickMedia({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
   }) async {
     try {
       final xFile = await _picker.pickMedia(
-        maxWidth: maxWidth?.toDouble(),
-        maxHeight: maxHeight?.toDouble(),
-        imageQuality: imageQuality,
+        maxWidth: options.maxWidth?.toDouble(),
+        maxHeight: options.maxHeight?.toDouble(),
+        imageQuality: options.quality,
       );
 
       if (xFile == null) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(_fromXFile(xFile));
+      return PlatformSuccess(_fromXFile(xFile));
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick media');
     } catch (e, st) {
@@ -149,23 +132,21 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
 
   @override
   Future<PlatformResult<List<PickedAsset>>> pickMultipleMedia({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
     int? limit,
   }) async {
     try {
       final xFiles = await _picker.pickMultipleMedia(
-        maxWidth: maxWidth?.toDouble(),
-        maxHeight: maxHeight?.toDouble(),
-        imageQuality: imageQuality,
+        maxWidth: options.maxWidth?.toDouble(),
+        maxHeight: options.maxHeight?.toDouble(),
+        imageQuality: options.quality,
         limit: limit,
       );
 
       if (xFiles.isEmpty) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(xFiles.map(_fromXFile).toList());
+      return PlatformSuccess(xFiles.map(_fromXFile).toList());
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick media');
     } catch (e, st) {
@@ -184,7 +165,26 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
       allowedExtensions: allowedExtensions,
       allowMultiple: false,
     );
-    return result.map((assets) => assets.first);
+    // The single-file counterpart to pickFiles: take the first asset.
+    // (PlatformResult.map was removed — a sealed result is consumed by
+    // exhaustive switch, with the permission-denied arm before failed.)
+    return switch (result) {
+      PlatformSuccess(:final value) => PlatformSuccess(value.first),
+      PlatformCancelled() => const PlatformCancelled(),
+      PlatformUnsupported(:final reason) => PlatformUnsupported(reason),
+      PlatformPermissionDenied(
+        :final message,
+        :final error,
+        :final stackTrace,
+      ) =>
+        PlatformPermissionDenied(
+          message: message,
+          error: error,
+          stackTrace: stackTrace,
+        ),
+      PlatformFailed(:final message, :final error, :final stackTrace) =>
+        PlatformFailed(message, error: error, stackTrace: stackTrace),
+    };
   }
 
   @override
@@ -237,7 +237,7 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
         }
         assets.add(asset);
       }
-      return PlatformSupported(assets);
+      return PlatformSuccess(assets);
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick files');
     } catch (e, st) {
@@ -248,22 +248,20 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
 
   Future<PlatformResult<PickedAsset>> _pickFromSource(
     ImageSource source, {
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    required ImageOptions options,
   }) async {
     try {
       final xFile = await _picker.pickImage(
         source: source,
-        maxWidth: maxWidth?.toDouble(),
-        maxHeight: maxHeight?.toDouble(),
-        imageQuality: imageQuality,
+        maxWidth: options.maxWidth?.toDouble(),
+        maxHeight: options.maxHeight?.toDouble(),
+        imageQuality: options.quality,
       );
 
       if (xFile == null) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(_fromXFile(xFile));
+      return PlatformSuccess(_fromXFile(xFile));
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick image');
     } catch (e, st) {
@@ -285,7 +283,7 @@ final class PluginAssetPickerAdapter implements AssetPickerAdapter {
       if (xFile == null) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(_fromXFile(xFile));
+      return PlatformSuccess(_fromXFile(xFile));
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick video');
     } catch (e, st) {

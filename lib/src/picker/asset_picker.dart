@@ -1,12 +1,13 @@
+import 'package:device_io/src/picker/image_options.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Platform-agnostic asset/image picking.
 ///
 /// ```dart
-/// final result = await deviceIO.assetPicker.pickImage();
+/// final result = await deviceIO.picker.pickImage();
 /// switch (result) {
-///   case PlatformSupported(:final value):
+///   case PlatformSuccess(:final value):
 ///     await upload(await value.readBytes());
 ///   case PlatformCancelled():
 ///     break; // user changed their mind
@@ -18,22 +19,23 @@ import 'package:device_io/src/types/platform_result.dart';
 /// }
 /// ```
 ///
-/// Implemented by `PluginAssetPickerAdapter` (all platforms — the
-/// underlying image_picker / file_picker plugins are already federated).
+/// Implemented by `PluginAssetPicker` (all platforms — the underlying
+/// image_picker / file_picker plugins are already federated).
 ///
 /// Every method returns [PlatformCancelled] when the user dismisses the
 /// picker, and [PlatformPermissionDenied] when the OS blocks access
 /// (camera, photo library, storage).
-abstract interface class AssetPickerAdapter {
+abstract interface class AssetPicker {
   /// Whether camera capture is supported on this platform.
-  /// UI should hide the camera button when false.
+  ///
+  /// The one pre-call probe on this interface, because UI needs it BEFORE
+  /// showing a camera button — every other capability degrades at call
+  /// time via [PlatformUnsupported].
   bool get isCameraSupported;
 
   /// Pick an image from the device gallery/photo library.
   Future<PlatformResult<PickedAsset>> pickImage({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
   });
 
   /// Pick multiple images from the device gallery/photo library.
@@ -42,9 +44,7 @@ abstract interface class AssetPickerAdapter {
   /// [PlatformCancelled]. [limit] caps how many images the user can select
   /// on platforms that support it; ignored elsewhere.
   Future<PlatformResult<List<PickedAsset>>> pickImages({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
     int? limit,
   });
 
@@ -54,9 +54,7 @@ abstract interface class AssetPickerAdapter {
   /// Returns [PlatformUnsupported] on desktop, where no camera
   /// integration exists.
   Future<PlatformResult<PickedAsset>> captureImage({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
   });
 
   /// Pick a video from the device gallery/photo library.
@@ -77,42 +75,21 @@ abstract interface class AssetPickerAdapter {
 
   /// Pick a single image OR video from the gallery/photo library.
   ///
-  /// The resize options ([maxWidth], [maxHeight], [imageQuality]) apply to
-  /// images only — a picked video is returned untouched. Branch on the
-  /// result's [PickedAsset.mimeType] to tell the two apart.
-  ///
-  /// ```dart
-  /// final result = await deviceIO.assetPicker.pickMedia();
-  /// switch (result) {
-  ///   case PlatformSupported(:final value):
-  ///     final isVideo = value.mimeType.startsWith('video/');
-  ///     await upload(await value.readBytes(), isVideo: isVideo);
-  ///   case PlatformCancelled():
-  ///     break; // user changed their mind
-  ///   case PlatformPermissionDenied():
-  ///     promptForSettings();
-  ///   case PlatformUnsupported(:final reason):
-  ///   case PlatformFailed():
-  ///     showError(result);
-  /// }
-  /// ```
+  /// [options] applies to images only — a picked video is returned
+  /// untouched. Branch on the result's [PickedAsset.mimeType] to tell the
+  /// two apart.
   Future<PlatformResult<PickedAsset>> pickMedia({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
   });
 
   /// Pick multiple images and/or videos from the gallery/photo library.
   ///
   /// The returned list is never empty — an empty selection is
-  /// [PlatformCancelled]. The resize options ([maxWidth], [maxHeight],
-  /// [imageQuality]) apply to images only; videos are returned untouched.
-  /// [limit] caps how many items the user can select on platforms that
-  /// support it; ignored elsewhere.
+  /// [PlatformCancelled]. [options] applies to images only; videos are
+  /// returned untouched. [limit] caps how many items the user can select
+  /// on platforms that support it; ignored elsewhere.
   Future<PlatformResult<List<PickedAsset>>> pickMultipleMedia({
-    int? maxWidth,
-    int? maxHeight,
-    int? imageQuality,
+    ImageOptions options = const ImageOptions(),
     int? limit,
   });
 

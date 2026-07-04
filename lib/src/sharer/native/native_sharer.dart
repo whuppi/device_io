@@ -14,16 +14,16 @@ import 'dart:ui' show Rect;
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 
 import 'package:device_io/src/_shared/native_fs.dart';
-import 'package:device_io/src/sharing/share_file.dart';
-import 'package:device_io/src/sharing/share_origin.dart';
-import 'package:device_io/src/sharing/sharing_adapter.dart';
+import 'package:device_io/src/sharer/share_file.dart';
+import 'package:device_io/src/sharer/share_origin.dart';
+import 'package:device_io/src/sharer/sharer.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 /// Native (mobile/desktop) sharing via share_plus.
 ///
 /// Files are staged in the OS temporary directory before sharing.
-final class NativeSharingAdapter implements SharingAdapter {
+final class NativeSharer implements Sharer {
   @override
   Future<PlatformResult<void>> shareText({
     required String text,
@@ -191,7 +191,7 @@ final class NativeSharingAdapter implements SharingAdapter {
     return switch (result.status) {
       ShareResultStatus.dismissed => const PlatformCancelled(),
       ShareResultStatus.success ||
-      ShareResultStatus.unavailable => const PlatformSupported(null),
+      ShareResultStatus.unavailable => const PlatformSuccess(null),
     };
   }
 }

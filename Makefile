@@ -82,7 +82,7 @@ platforms:
 #                      test/web_runners/ (the VM suites must compile
 #                      without a browser target)
 #                    - dart:io outside the native-adapter suites
-#                      (test/_shared, test/download, test/sharing,
+#                      (test/_shared, test/saver, test/sharer,
 #                      test/opener — their SUBJECTS wrap dart:io)
 #                      carries an 'io-exempt: <reason>' comment
 #                    - no direct plugin imports anywhere in test/ —
@@ -131,7 +131,7 @@ test: test-unit test-web
 test-unit:
 	@echo "=== Unit: VM (types + _shared + picker + native adapters) ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/download test/sharing test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
+	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/saver test/sharer test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
 
 # Web suites run under `dart test -p chrome`, NOT flutter test: flutter test
 # boots CanvasKit, which hangs on Windows headless Chrome (flutter#162798).

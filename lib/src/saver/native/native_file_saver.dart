@@ -5,27 +5,28 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:device_io/src/_shared/native_fs.dart';
-import 'package:device_io/src/download/download_adapter.dart';
+import 'package:device_io/src/saver/file_saver.dart';
+import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
-/// Native (mobile/desktop) download adapter.
+/// Native (mobile/desktop) file saver.
 ///
 /// Silent saves go to the downloads directory — the user's real Downloads
 /// on desktop, an app-private folder on mobile (see the interface docs).
 /// [saveAs] opens the system save dialog instead.
-final class NativeDownloadAdapter implements DownloadAdapter {
-  /// Creates the adapter, optionally scoping saves to [appSubfolder].
-  NativeDownloadAdapter({this.appSubfolder});
+final class NativeFileSaver implements FileSaver {
+  /// Creates the saver, optionally scoping saves to [downloadsSubfolder].
+  NativeFileSaver({this.downloadsSubfolder});
 
   /// Optional subfolder within the downloads directory.
   /// e.g. 'MyApp' → saves to Downloads/MyApp/filename.
   /// If null, saves directly to the downloads directory.
-  final String? appSubfolder;
+  final String? downloadsSubfolder;
 
   // ── Silent saves — downloads directory ──
 
   @override
-  Future<PlatformResult<String?>> saveToDevice({
+  Future<PlatformResult<SaveLocation>> save({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -40,7 +41,7 @@ final class NativeDownloadAdapter implements DownloadAdapter {
         await _deleteQuietly(file);
         rethrow;
       }
-      return PlatformSupported(file.path);
+      return PlatformSuccess(SavedAtPath(file.path));
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
       return PlatformFailed(
@@ -52,7 +53,7 @@ final class NativeDownloadAdapter implements DownloadAdapter {
   }
 
   @override
-  Future<PlatformResult<String?>> saveStreamToDevice({
+  Future<PlatformResult<SaveLocation>> saveStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -80,7 +81,7 @@ final class NativeDownloadAdapter implements DownloadAdapter {
         await _deleteQuietly(file);
         rethrow;
       }
-      return PlatformSupported(file.path);
+      return PlatformSuccess(SavedAtPath(file.path));
     } catch (e, st) {
       if (e is Error) rethrow;
       return PlatformFailed(
@@ -94,7 +95,7 @@ final class NativeDownloadAdapter implements DownloadAdapter {
   // ── User-visible save — system dialog ──
 
   @override
-  Future<PlatformResult<String?>> saveAs({
+  Future<PlatformResult<SaveLocation>> saveAs({
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
@@ -112,7 +113,7 @@ final class NativeDownloadAdapter implements DownloadAdapter {
       if (path == null) {
         return const PlatformCancelled();
       }
-      return PlatformSupported(path);
+      return PlatformSuccess(SavedAtPath(path));
     } catch (e, st) {
       if (e is Error) rethrow;
       return PlatformFailed(
@@ -132,8 +133,8 @@ final class NativeDownloadAdapter implements DownloadAdapter {
     var dir = await getDownloadsDirectory();
     dir ??= await getApplicationDocumentsDirectory();
 
-    if (appSubfolder != null) {
-      dir = Directory('${dir.path}/${sanitizeFileName(appSubfolder!)}');
+    if (downloadsSubfolder != null) {
+      dir = Directory('${dir.path}/${sanitizeFileName(downloadsSubfolder!)}');
     }
     // path_provider does not guarantee the directory exists (it usually
     // does not on iOS). Creating is idempotent.

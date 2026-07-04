@@ -66,7 +66,7 @@ Future<PlatformResult<List<PickedAsset>>?> lazyWebFilePick({
         ),
       );
     }
-    return PlatformSupported(assets);
+    return PlatformSuccess(assets);
   } catch (e, st) {
     if (e is Error) rethrow; // Programmer bugs crash loudly.
     if (e.toString().contains('AbortError')) {

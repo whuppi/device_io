@@ -5,14 +5,14 @@
 // from that page. Do not modularize.
 //
 // Four tabs, one per API surface:
-//   Pick   — assetPicker: gallery images, camera capture, videos,
+//   Pick   — picker: gallery images, camera capture, videos,
 //            mixed media, generic files. Picked assets are lazy —
 //            bytes are read on tap, never at pick time.
-//   Share  — sharing: text, single file, multiple files in one
+//   Share  — sharer: text, single file, multiple files in one
 //            sheet, and a ~1MB byte stream.
-//   Save   — download: silent save to downloads, streamed save,
+//   Save   — saver: silent save to downloads, streamed save,
 //            and the user-picks-destination system dialog.
-//   Open   — fileOpener: open in-memory bytes in the default
+//   Open   — opener: open in-memory bytes in the default
 //            viewer, and open the last silently-saved path.
 //
 // Every call returns a sealed PlatformResult. One renderer
@@ -27,12 +27,12 @@ import 'dart:typed_data';
 import 'package:device_io/device_io.dart';
 import 'package:flutter/material.dart';
 
-Future<void> main() async {
-  // initDeviceIO does platform work (resolving native vs web adapters), so
-  // the binding must be ready first.
+void main() {
+  // Construction is sync; ensureInitialized() is the usual pre-runApp step,
+  // and the plugin channels the capabilities use need a binding at call time.
   WidgetsFlutterBinding.ensureInitialized();
-  final deviceIO = await initDeviceIO(
-    config: const DeviceIOConfig(downloadSubfolder: 'DeviceIOExample'),
+  final deviceIO = DeviceIO(
+    config: const DeviceIOConfig(downloadsSubfolder: 'DeviceIOExample'),
   );
   runApp(DeviceIOExampleApp(deviceIO: deviceIO));
 }
@@ -96,7 +96,7 @@ class _HomePageState extends State<HomePage> {
   final List<LogEntry> _log = <LogEntry>[];
   final List<PickedItem> _picked = <PickedItem>[];
 
-  /// Path returned by the most recent [DownloadAdapter.saveToDevice] — feeds
+  /// Path returned by the most recent [FileSaver.save] — feeds
   /// the "open last saved" button. Null on web (no filesystem paths) and
   /// before the first successful save.
   String? _lastSavedPath;
@@ -115,7 +115,7 @@ class _HomePageState extends State<HomePage> {
     String Function(T value)? describe,
   }) {
     final entry = switch (result) {
-      PlatformSupported<T>(:final value) => LogEntry(
+      PlatformSuccess<T>(:final value) => LogEntry(
         LogLevel.success,
         describe != null ? '$action → ${describe(value)}' : '$action → ok',
       ),
@@ -143,13 +143,13 @@ class _HomePageState extends State<HomePage> {
   // ── Pick handlers ──────────────────────────────────────────────────────
 
   Future<void> _pickImage() async {
-    final result = await _io.assetPicker.pickImage();
+    final result = await _io.picker.pickImage();
     _absorbOne(result);
     _recordAsset(result, action: 'Pick image');
   }
 
   Future<void> _pickImages() async {
-    final result = await _io.assetPicker.pickImages(limit: 10);
+    final result = await _io.picker.pickImages(limit: 10);
     _absorbMany(result);
     _record(
       'Pick images',
@@ -159,19 +159,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _captureImage() async {
-    final result = await _io.assetPicker.captureImage();
+    final result = await _io.picker.captureImage();
     _absorbOne(result);
     _recordAsset(result, action: 'Capture image');
   }
 
   Future<void> _pickVideo() async {
-    final result = await _io.assetPicker.pickVideo();
+    final result = await _io.picker.pickVideo();
     _absorbOne(result);
     _recordAsset(result, action: 'Pick video');
   }
 
   Future<void> _captureVideo() async {
-    final result = await _io.assetPicker.captureVideo(
+    final result = await _io.picker.captureVideo(
       maxDuration: const Duration(seconds: 30),
     );
     _absorbOne(result);
@@ -179,13 +179,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _pickMedia() async {
-    final result = await _io.assetPicker.pickMedia();
+    final result = await _io.picker.pickMedia();
     _absorbOne(result);
     _recordAsset(result, action: 'Pick media');
   }
 
   Future<void> _pickMultipleMedia() async {
-    final result = await _io.assetPicker.pickMultipleMedia(limit: 5);
+    final result = await _io.picker.pickMultipleMedia(limit: 5);
     _absorbMany(result);
     _record(
       'Pick multiple media',
@@ -195,13 +195,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _pickFile() async {
-    final result = await _io.assetPicker.pickFile();
+    final result = await _io.picker.pickFile();
     _absorbOne(result);
     _recordAsset(result, action: 'Pick file');
   }
 
   Future<void> _pickFiles() async {
-    final result = await _io.assetPicker.pickFiles();
+    final result = await _io.picker.pickFiles();
     _absorbMany(result);
     _record(
       'Pick files',
@@ -211,13 +211,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _absorbOne(PlatformResult<PickedAsset> result) {
-    if (result case PlatformSupported(:final value)) {
+    if (result case PlatformSuccess(:final value)) {
       setState(() => _picked.add(PickedItem(value)));
     }
   }
 
   void _absorbMany(PlatformResult<List<PickedAsset>> result) {
-    if (result case PlatformSupported(:final value)) {
+    if (result case PlatformSuccess(:final value)) {
       setState(() => _picked.addAll(value.map(PickedItem.new)));
     }
   }
@@ -247,7 +247,7 @@ class _HomePageState extends State<HomePage> {
   // ── Share handlers ─────────────────────────────────────────────────────
 
   Future<void> _shareText() async {
-    final result = await _io.sharing.shareText(
+    final result = await _io.sharer.shareText(
       text: 'Shared from the device_io example app.',
       subject: 'device_io',
     );
@@ -256,7 +256,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _shareFile() async {
     final bytes = _utf8('Generated in code, shared as a file.\n');
-    final result = await _io.sharing.shareFile(
+    final result = await _io.sharer.shareFile(
       bytes: bytes,
       fileName: 'note.txt',
       mimeType: 'text/plain',
@@ -269,7 +269,7 @@ class _HomePageState extends State<HomePage> {
     // sharePositionOrigin omitted: it's the iPadOS popover anchor and null is
     // valid on every other platform. A real app anchors it to the tapped
     // button's global rect on iPad.
-    final result = await _io.sharing.shareFiles(
+    final result = await _io.sharer.shareFiles(
       files: [
         ShareFile(
           bytes: _utf8('name,role\nAlice,admin\nBob,user\n'),
@@ -289,7 +289,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _shareFileStream() async {
-    final result = await _io.sharing.shareFileStream(
+    final result = await _io.sharer.shareFileStream(
       byteStream: _patternedStream(1024 * 1024),
       fileName: 'onemb.bin',
       mimeType: 'application/octet-stream',
@@ -300,46 +300,49 @@ class _HomePageState extends State<HomePage> {
 
   // ── Save handlers ──────────────────────────────────────────────────────
 
-  Future<void> _saveToDevice() async {
-    final result = await _io.download.saveToDevice(
+  Future<void> _save() async {
+    final result = await _io.saver.save(
       bytes: _utf8('name,role\nAlice,admin\nBob,user\n'),
       fileName: 'people.csv',
       mimeType: 'text/csv',
     );
-    if (result case PlatformSupported(value: final String? path)) {
+    if (result case PlatformSuccess(value: SavedAtPath(:final path))) {
       setState(() => _lastSavedPath = path);
     }
-    _record('Save CSV', result, describe: _describePath);
+    _record('Save CSV', result, describe: _describeLocation);
   }
 
-  Future<void> _saveStreamToDevice() async {
-    final result = await _io.download.saveStreamToDevice(
+  Future<void> _saveStream() async {
+    final result = await _io.saver.saveStream(
       byteStream: _textChunkStream(),
       fileName: 'log.txt',
       mimeType: 'text/plain',
     );
-    if (result case PlatformSupported(value: final String? path)) {
+    if (result case PlatformSuccess(value: SavedAtPath(:final path))) {
       setState(() => _lastSavedPath = path);
     }
-    _record('Save stream', result, describe: _describePath);
+    _record('Save stream', result, describe: _describeLocation);
   }
 
   Future<void> _saveAs() async {
-    final result = await _io.download.saveAs(
+    final result = await _io.saver.saveAs(
       bytes: _utf8('id,value\n1,Pick where this lands\n'),
       fileName: 'export.csv',
       dialogTitle: 'Save example export',
       mimeType: 'text/csv',
     );
-    _record('Save as…', result, describe: _describePath);
+    _record('Save as…', result, describe: _describeLocation);
   }
 
-  String _describePath(String? path) => path ?? 'saved (browser download)';
+  String _describeLocation(SaveLocation loc) => switch (loc) {
+    SavedAtPath(:final path) => path,
+    SavedByBrowser() => 'saved (browser saver)',
+  };
 
   // ── Open handlers ──────────────────────────────────────────────────────
 
   Future<void> _openBytes() async {
-    final result = await _io.fileOpener.openBytes(
+    final result = await _io.opener.openBytes(
       bytes: _utf8('Opened straight from memory.\n'),
       fileName: 'hello.txt',
       mimeType: 'text/plain',
@@ -350,7 +353,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openLastSaved() async {
     final path = _lastSavedPath;
     if (path == null) return;
-    final result = await _io.fileOpener.openPath(filePath: path);
+    final result = await _io.opener.openPath(filePath: path);
     _record<void>('Open last saved', result);
   }
 
@@ -419,7 +422,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _pickTab() {
-    final cameraSupported = _io.assetPicker.isCameraSupported;
+    final cameraSupported = _io.picker.isCameraSupported;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -538,12 +541,12 @@ class _HomePageState extends State<HomePage> {
               runSpacing: 8,
               children: [
                 FilledButton.tonal(
-                  onPressed: _saveToDevice,
-                  child: const Text('saveToDevice (CSV)'),
+                  onPressed: _save,
+                  child: const Text('save (CSV)'),
                 ),
                 FilledButton.tonal(
-                  onPressed: _saveStreamToDevice,
-                  child: const Text('saveStreamToDevice'),
+                  onPressed: _saveStream,
+                  child: const Text('saveStream'),
                 ),
                 FilledButton.tonal(
                   onPressed: _saveAs,

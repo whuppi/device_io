@@ -1,12 +1,12 @@
-// CHARTER — this file alone proves the NativeSharingAdapter's request
+// CHARTER — this file alone proves the NativeSharer's request
 // contract, by inspecting the ShareParams it hands the platform AND the real
 // files it staged on disk:
 //   - shareText records exact text / subject / sharePositionOrigin and, on a
-//     success ShareResult, returns Supported;
+//     success ShareResult, returns Success;
 //   - shareFile stages a REAL file whose bytes equal the declared payload,
 //     under the sanitized fileName; an explicit mimeType passes through, a
 //     null one is inferred from the name to the exact declared value;
-//   - a dismissed ShareResult -> Cancelled; an unavailable one -> Supported
+//   - a dismissed ShareResult -> Cancelled; an unavailable one -> Success
 //     (the sheet was shown, the outcome is just unknowable);
 //   - shareFileStream stages a byte-for-byte patterned multi-chunk stream;
 //   - shareFiles stages N files into ONE directory, preserves order,
@@ -36,9 +36,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 
-import 'package:device_io/src/sharing/native/native_sharing_adapter.dart';
-import 'package:device_io/src/sharing/share_file.dart';
-import 'package:device_io/src/sharing/share_origin.dart';
+import 'package:device_io/src/sharer/native/native_sharer.dart';
+import 'package:device_io/src/sharer/share_file.dart';
+import 'package:device_io/src/sharer/share_origin.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 import '../harness/bytes.dart';
@@ -65,10 +65,10 @@ void main() {
     if (root.existsSync()) root.deleteSync(recursive: true);
   });
 
-  final adapter = NativeSharingAdapter();
+  final adapter = NativeSharer();
 
   test(
-    'shareText records exact text/subject/origin and returns Supported',
+    'shareText records exact text/subject/origin and returns Success',
     () async {
       const origin = ShareOrigin.fromLTWH(1, 2, 3, 4);
 
@@ -78,7 +78,7 @@ void main() {
         sharePositionOrigin: origin,
       );
 
-      expect(result, isA<PlatformSupported<void>>());
+      expect(result, isA<PlatformSuccess<void>>());
       expect(share.callCount, 1);
       final params = share.lastParams!;
       expect(params.text, 'hello world');
@@ -100,7 +100,7 @@ void main() {
           mimeType: 'text/plain',
         );
 
-        expect(result, isA<PlatformSupported<void>>());
+        expect(result, isA<PlatformSuccess<void>>());
         final xfile = share.lastParams!.files!.single;
         expect(_basename(xfile.path), 'note.txt');
         expect(File(xfile.path).existsSync(), isTrue);
@@ -136,7 +136,7 @@ void main() {
       expect(result, isA<PlatformCancelled<void>>());
     }, timeout: t(3));
 
-    test('unavailable ShareResult -> Supported(null)', () async {
+    test('unavailable ShareResult -> Success(null)', () async {
       share.result = ShareResult.unavailable;
 
       final result = await adapter.shareFile(
@@ -144,7 +144,7 @@ void main() {
         fileName: 'a.txt',
       );
 
-      expect(result, isA<PlatformSupported<void>>());
+      expect(result, isA<PlatformSuccess<void>>());
     }, timeout: t(3));
   });
 
@@ -158,7 +158,7 @@ void main() {
         fileName: 'stream.bin',
       );
 
-      expect(result, isA<PlatformSupported<void>>());
+      expect(result, isA<PlatformSuccess<void>>());
       final xfile = share.lastParams!.files!.single;
       final onDisk = Uint8List.fromList(File(xfile.path).readAsBytesSync());
       expect(onDisk.length, full.length);
@@ -183,7 +183,7 @@ void main() {
         sharePositionOrigin: origin,
       );
 
-      expect(result, isA<PlatformSupported<void>>());
+      expect(result, isA<PlatformSuccess<void>>());
       final files = share.lastParams!.files!;
       expect(files.length, 3);
 

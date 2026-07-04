@@ -2,14 +2,14 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:meta/meta.dart';
 
-/// One file to hand to `SharingAdapter.shareFiles`.
+/// One file to hand to `Sharer.shareFiles`.
 ///
 /// A file is its [bytes] plus the [fileName] the share sheet shows. Give a
 /// [mimeType] to override what the receiving app infers; when null the
 /// adapter derives one from the file name.
 ///
 /// ```dart
-/// await deviceIO.sharing.shareFiles(
+/// await deviceIO.sharer.shareFiles(
 ///   files: [
 ///     ShareFile(bytes: pngBytes, fileName: 'chart.png'),
 ///     ShareFile(bytes: csvBytes, fileName: 'data.csv'),

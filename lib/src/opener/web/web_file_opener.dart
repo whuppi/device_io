@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-import 'package:device_io/src/opener/file_opener_adapter.dart';
+import 'package:device_io/src/opener/file_opener.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
@@ -12,7 +12,7 @@ import 'package:device_io/src/types/platform_result.dart';
 ///
 /// The browser IS the viewer on web: PDFs, images, video, and text render
 /// in the new tab; anything the browser can't display downloads instead.
-final class WebFileOpenerAdapter implements FileOpenerAdapter {
+final class WebFileOpener implements FileOpener {
   @override
   Future<PlatformResult<void>> openBytes({
     required Uint8List bytes,
@@ -43,7 +43,7 @@ final class WebFileOpenerAdapter implements FileOpenerAdapter {
           () => web.URL.revokeObjectURL(url),
         ),
       );
-      return const PlatformSupported(null);
+      return const PlatformSuccess(null);
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
       return PlatformFailed(

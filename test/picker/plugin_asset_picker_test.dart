@@ -1,4 +1,4 @@
-// CHARTER — this file alone proves the PluginAssetPickerAdapter's mapping
+// CHARTER — this file alone proves the PluginAssetPicker's mapping
 // contract between the image_picker / file_picker plugins and the
 // PlatformResult<PickedAsset> surface:
 //   - option passthrough: maxWidth/maxHeight/imageQuality/limit/maxDuration and
@@ -7,7 +7,7 @@
 //   - XFile → lazy PickedAsset: readBytes returns the picked file's declared
 //     bytes, mimeType is inferred from fileName when the XFile has none and
 //     passed through when it does;
-//   - null / empty-selection → PlatformCancelled (never an empty Supported);
+//   - null / empty-selection → PlatformCancelled (never an empty Success);
 //   - captureImage/captureVideo are camera-gated on defaultTargetPlatform: iOS
 //     proceeds (source == camera), macOS returns PlatformUnsupported WITHOUT
 //     touching the fake;
@@ -28,14 +28,18 @@
 
 import 'dart:typed_data';
 
+import 'package:device_io/src/picker/image_options.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
-import 'package:device_io/src/picker/plugin_asset_picker_adapter.dart';
+import 'package:device_io/src/picker/plugin_asset_picker.dart';
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+// device_io's ImageOptions is the public one here; hide the plugin's
+// same-named type (this test fakes the image_picker platform interface).
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart'
+    hide ImageOptions;
 
 import '../harness/bytes.dart';
 import '../harness/fake_file_picker.dart';
@@ -49,14 +53,14 @@ void main() {
   late FakeImagePickerPlatform fakeIp;
   late FakeFilePicker fakeFp;
   late TempWorkspace tw;
-  late PluginAssetPickerAdapter adapter;
+  late PluginAssetPicker adapter;
 
   setUp(() {
     fakeIp = FakeImagePickerPlatform();
     ImagePickerPlatform.instance = fakeIp;
     fakeFp = FakeFilePicker()..install();
     tw = TempWorkspace();
-    adapter = PluginAssetPickerAdapter();
+    adapter = PluginAssetPicker();
   });
 
   tearDown(() {
@@ -65,14 +69,10 @@ void main() {
     tw.dispose();
   });
 
-  // Unwrap a Supported<T> or fail loudly with the actual variant.
+  // Unwrap a Success<T> or fail loudly with the actual variant.
   T supported<T>(PlatformResult<T> r) {
-    expect(
-      r,
-      isA<PlatformSupported<T>>(),
-      reason: 'expected Supported, got $r',
-    );
-    return (r as PlatformSupported<T>).value;
+    expect(r, isA<PlatformSuccess<T>>(), reason: 'expected Success, got $r');
+    return (r as PlatformSuccess<T>).value;
   }
 
   Future<void> expectBytes(PickedAsset asset, Uint8List declared) async {
@@ -89,9 +89,7 @@ void main() {
     fakeIp.single = tw.xFile('photo.png', bytes); // no mimeType on the XFile
 
     final r = await adapter.pickImage(
-      maxWidth: 100,
-      maxHeight: 200,
-      imageQuality: 80,
+      options: const ImageOptions(maxWidth: 100, maxHeight: 200, quality: 80),
     );
 
     // request recorded exactly as sent
@@ -136,7 +134,10 @@ void main() {
       tw.xFile('c.webp', c),
     ];
 
-    final r = await adapter.pickImages(limit: 3, maxWidth: 50);
+    final r = await adapter.pickImages(
+      limit: 3,
+      options: const ImageOptions(maxWidth: 50),
+    );
 
     expect(fakeIp.route, PickerRoute.getMultiImageWithOptions);
     expect(fakeIp.limit, 3);
@@ -150,7 +151,7 @@ void main() {
   }, timeout: t(5));
 
   test(
-    'pickImages maps an empty selection to Cancelled, never empty Supported',
+    'pickImages maps an empty selection to Cancelled, never empty Success',
     () async {
       fakeIp.multi = const [];
       final r = await adapter.pickImages();
@@ -170,7 +171,7 @@ void main() {
     expect(fakeIp.called, isTrue);
     expect(fakeIp.route, PickerRoute.getImageFromSource);
     expect(fakeIp.source, ImageSource.camera);
-    expect(r, isA<PlatformSupported<PickedAsset>>());
+    expect(r, isA<PlatformSuccess<PickedAsset>>());
   }, timeout: t(3));
 
   test(
@@ -226,7 +227,7 @@ void main() {
       expect(fakeIp.route, PickerRoute.getVideo);
       expect(fakeIp.source, ImageSource.camera);
       expect(fakeIp.maxDuration, const Duration(minutes: 1));
-      expect(r, isA<PlatformSupported<PickedAsset>>());
+      expect(r, isA<PlatformSuccess<PickedAsset>>());
     },
     timeout: t(3),
   );
@@ -249,7 +250,9 @@ void main() {
     final bytes = patternedBytes(15);
     fakeIp.multi = [tw.xFile('m.png', bytes)];
 
-    final r = await adapter.pickMedia(maxWidth: 10, imageQuality: 40);
+    final r = await adapter.pickMedia(
+      options: const ImageOptions(maxWidth: 10, quality: 40),
+    );
 
     expect(fakeIp.route, PickerRoute.getMedia);
     expect(fakeIp.allowMultiple, isFalse);
@@ -398,6 +401,6 @@ void main() {
     ]);
     final r = await adapter.pickFiles();
     expect(r, isA<PlatformFailed<List<PickedAsset>>>());
-    expect(r, isNot(isA<PlatformSupported<List<PickedAsset>>>()));
+    expect(r, isNot(isA<PlatformSuccess<List<PickedAsset>>>()));
   }, timeout: t(3));
 }

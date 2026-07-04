@@ -1,14 +1,14 @@
-// CHARTER — this file alone proves, in a REAL browser, the WebDownloadAdapter's
-// behavior against an instrumented JS surface: saveToDevice builds a Blob with
+// CHARTER — this file alone proves, in a REAL browser, the WebFileSaver's
+// behavior against an instrumented JS surface: save builds a Blob with
 // the declared mimeType (explicit passthrough AND inferred-from-fileName) and
-// returns Supported(null); saveAs, with showSaveFilePicker OVERRIDDEN to resolve
+// returns Success(SavedByBrowser()); saveAs, with showSaveFilePicker OVERRIDDEN to resolve
 // a fake handle, receives suggestedName == fileName, writes the EXACT declared
-// bytes to the writable, closes it, and returns Supported(handle.name); saveAs
+// bytes to the writable, closes it, and returns Success(SavedByBrowser(name)); saveAs
 // with the picker REJECTING as AbortError → Cancelled AND no download fallback
 // (createObjectURL untouched); rejecting as SecurityError → falls back to the
-// download path (createObjectURL WAS called) → Supported(null); the picker
-// DELETED from window → straight to download fallback → Supported(null);
-// saveStreamToDevice buffers a patterned multi-chunk stream into ONE Blob whose
+// download path (createObjectURL WAS called) → Success(SavedByBrowser()); the picker
+// DELETED from window → straight to download fallback → Success(SavedByBrowser());
+// saveStream buffers a patterned multi-chunk stream into ONE Blob whose
 // size equals the total and whose full content round-trips as patterned.
 // This is also the file that PROVES the override mechanism (resolve, record,
 // reject-as-DOMException) end to end — see the first two tests.
@@ -20,7 +20,8 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
-import 'package:device_io/src/download/web/web_download_adapter.dart';
+import 'package:device_io/src/saver/save_location.dart';
+import 'package:device_io/src/saver/web/web_file_saver.dart';
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
@@ -30,7 +31,7 @@ import '../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {
-  final adapter = WebDownloadAdapter();
+  final adapter = WebFileSaver();
   final overrides = <PropOverride>[];
 
   // What an instrumented URL.createObjectURL recorded.
@@ -60,39 +61,38 @@ void main() {
     overrides.clear();
   });
 
-  // ── saveToDevice: Blob carries the declared/inferred mimeType ──
+  // ── save: Blob carries the declared/inferred mimeType ──
 
   test(
-    'saveToDevice returns Supported(null) with an explicit mimeType',
+    'save returns Success(SavedByBrowser()) with an explicit mimeType',
     () async {
       instrumentCreateObjectUrl();
-      final result = await adapter.saveToDevice(
+      final result = await adapter.save(
         bytes: utf8SampleBytes,
         fileName: 'note.bin',
         mimeType: 'application/x-custom',
       );
-      expect(result, isA<PlatformSupported<String?>>());
-      expect((result as PlatformSupported<String?>).value, isNull);
+      expect(result, isA<PlatformSuccess<SaveLocation>>());
+      expect(
+        (result as PlatformSuccess<SaveLocation>).value,
+        isA<SavedByBrowser>(),
+      );
       expect(createObjectUrlCalls, 1);
       expect(lastBlob!.type, 'application/x-custom');
     },
     timeout: t(4),
   );
 
-  test(
-    'saveToDevice infers the Blob type from the fileName when null',
-    () async {
-      instrumentCreateObjectUrl();
-      final result = await adapter.saveToDevice(
-        bytes: utf8SampleBytes,
-        fileName: 'photo.png',
-      );
-      expect(result, isA<PlatformSupported<String?>>());
-      expect(createObjectUrlCalls, 1);
-      expect(lastBlob!.type, 'image/png');
-    },
-    timeout: t(4),
-  );
+  test('save infers the Blob type from the fileName when null', () async {
+    instrumentCreateObjectUrl();
+    final result = await adapter.save(
+      bytes: utf8SampleBytes,
+      fileName: 'photo.png',
+    );
+    expect(result, isA<PlatformSuccess<SaveLocation>>());
+    expect(createObjectUrlCalls, 1);
+    expect(lastBlob!.type, 'image/png');
+  }, timeout: t(4));
 
   // ── saveAs: picker resolves a fake handle (records + writes) ──
   // PROVES: resolve a scripted JSPromise, record the passed options, capture
@@ -152,8 +152,12 @@ void main() {
       expect(written, isNotNull);
       expect(written!.toDart, orderedEquals(payload));
       expect(closed, isTrue);
-      expect(result, isA<PlatformSupported<String?>>());
-      expect((result as PlatformSupported<String?>).value, 'saved-as.bin');
+      expect(result, isA<PlatformSuccess<SaveLocation>>());
+      expect(
+        ((result as PlatformSuccess<SaveLocation>).value as SavedByBrowser)
+            .fileName,
+        'saved-as.bin',
+      );
       // The dialog path succeeded — no download fallback.
       expect(createObjectUrlCalls, 0);
     },
@@ -183,7 +187,7 @@ void main() {
         fileName: 'report.bin',
       );
 
-      expect(result, isA<PlatformCancelled<String?>>());
+      expect(result, isA<PlatformCancelled<SaveLocation>>());
       expect(createObjectUrlCalls, 0); // fallback must NOT have run
     },
     timeout: t(5),
@@ -192,7 +196,7 @@ void main() {
   // ── saveAs: picker rejects as SecurityError → download fallback ──
 
   test(
-    'saveAs picker SecurityError → download fallback → Supported(null)',
+    'saveAs picker SecurityError → download fallback → Success(SavedByBrowser())',
     () async {
       overrides.add(
         PropOverride.install(
@@ -210,8 +214,11 @@ void main() {
         fileName: 'report.png',
       );
 
-      expect(result, isA<PlatformSupported<String?>>());
-      expect((result as PlatformSupported<String?>).value, isNull);
+      expect(result, isA<PlatformSuccess<SaveLocation>>());
+      expect(
+        (result as PlatformSuccess<SaveLocation>).value,
+        isA<SavedByBrowser>(),
+      );
       expect(createObjectUrlCalls, 1); // fallback DID run
       expect(lastBlob!.type, 'image/png');
     },
@@ -229,15 +236,15 @@ void main() {
       fileName: 'doc.pdf',
     );
 
-    expect(result, isA<PlatformSupported<String?>>());
+    expect(result, isA<PlatformSuccess<SaveLocation>>());
     expect(createObjectUrlCalls, 1);
     expect(lastBlob!.type, 'application/pdf');
   }, timeout: t(4));
 
-  // ── saveStreamToDevice: multi-chunk → ONE Blob of the full size ──
+  // ── saveStream: multi-chunk → ONE Blob of the full size ──
 
   test(
-    'saveStreamToDevice buffers a patterned multi-chunk stream into one Blob',
+    'saveStream buffers a patterned multi-chunk stream into one Blob',
     () async {
       instrumentCreateObjectUrl();
 
@@ -252,12 +259,12 @@ void main() {
         }
       }
 
-      final result = await adapter.saveStreamToDevice(
+      final result = await adapter.saveStream(
         byteStream: chunks(),
         fileName: 'video.mp4',
       );
 
-      expect(result, isA<PlatformSupported<String?>>());
+      expect(result, isA<PlatformSuccess<SaveLocation>>());
       expect(createObjectUrlCalls, 1); // exactly one blob
       expect(lastBlob!.size, total);
       expect(lastBlob!.type, 'video/mp4');
