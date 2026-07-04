@@ -40,7 +40,7 @@ ENTRY SHAPE
 
   EXCEPTION — the genesis entry (a ground-up build, no prior published
   version) uses facet tags instead of deltas: **API:** / **Safety:** /
-  etc., describing the new package's dimensions. See the 1.0.0 entry.
+  etc., describing the new package's dimensions.
 
 CONTENT RULES (never change)
   • Migrate from the entry ALONE — breaking changes inline, old → new.
@@ -57,8 +57,3 @@ CONTENT RULES (never change)
     docs/CAPABILITY_ROADMAP.md; the changelog says only what CHANGED.
 ═══════════════════════════════════════════════════════════════════════
 -->
-
-## 1.0.0
-
-First public release — cross-platform device IO for Flutter: pick, share,
-save, open. One API on iOS, Android, macOS, Windows, Linux, and web.
