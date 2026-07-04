@@ -291,7 +291,7 @@ Each `readStream()` call returns a **fresh** stream, so you can read the same as
 
 - Native picks read from disk on demand.
 - Web image picks read from the browser blob on demand.
-- Web generic-file picks are the one eager case — the file-picker plugin hands over bytes, not a blob reference.
+- Web generic-file picks read on demand too: via File System Access where the browser has it, otherwise through the file-picker plugin's own blob read. The one exception is a *multi*-file pick without File System Access (Firefox, Safari), which buffers the selection up front.
 
 </details>
 
@@ -464,7 +464,7 @@ On web, the Chromium save dialog comes from the File System Access API, writing 
 
 There's no minimum-version table, because the web layer **feature-detects at runtime and degrades gracefully** instead of gating on a version:
 
-- **File System Access** (the `saveAs` dialog, lazy file-pick reads) is Chromium-only. Where it's absent — Firefox, Safari — `saveAs` becomes a plain download and file picks read eagerly. Everything still works; the experience is just a notch plainer.
+- **File System Access** (the `saveAs` dialog, lazy file-pick reads) is Chromium-only. Where it's absent — Firefox, Safari — `saveAs` becomes a plain download and a *multi*-file pick buffers up front (single picks still read lazily).
 - **Web Share** availability varies by browser and by whether the page is served over HTTPS. A dismissed sheet comes back as `PlatformCancelled`.
 - **Camera capture** works in mobile browsers (the file input's `capture` attribute); desktop browsers report `PlatformUnsupported`.
 

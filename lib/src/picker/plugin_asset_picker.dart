@@ -21,9 +21,11 @@ import 'package:device_io/src/types/platform_result.dart';
 // only where flagged with kIsWeb below:
 //   - camera capture support (mobile only);
 //   - web file picks prefer the File System Access picker (lazy) where the
-//     browser has it, and fall back to file_picker's eager bytes where it
-//     doesn't — the one true platform bind is behind the stub-default
-//     conditional export in web_file_pick.dart, not in this file.
+//     browser has it; otherwise file_picker backs the read on demand via
+//     readAsBytes()/readAsByteStream() — lazy for a single pick, buffered
+//     up front only for a multi-selection. The one true platform bind is
+//     behind the stub-default conditional export in web_file_pick.dart,
+//     not in this file.
 // The other capabilities keep their native/web adapter pairs because they
 // genuinely bind platform APIs.
 final class PluginAssetPicker implements AssetPicker {
@@ -213,26 +215,39 @@ final class PluginAssetPicker implements AssetPicker {
     if (lazy != null) return lazy;
 
     try {
-      final result = await FilePicker.pickFiles(
-        type: allowedExtensions != null ? FileType.custom : FileType.any,
-        allowedExtensions: allowedExtensions,
-        allowMultiple: allowMultiple,
-        // Web file picks have no lazy handle — the plugin must hand over
-        // bytes up front. Native picks stay lazy via the cached-file path.
-        withData: kIsWeb,
-      );
-
-      if (result == null || result.files.isEmpty) {
-        return const PlatformCancelled();
+      final type = allowedExtensions != null ? FileType.custom : FileType.any;
+      // Single and multi selection are separate file_picker entry points:
+      // pickFile for one, pickFiles for many. Neither is handed an
+      // eager-bytes flag, so the picked files are read on demand below via
+      // readAsBytes()/readAsByteStream(); only a multi-selection on a browser
+      // without File System Access loads up front.
+      final List<PlatformFile> files;
+      if (allowMultiple) {
+        final result = await FilePicker.pickFiles(
+          type: type,
+          allowedExtensions: allowedExtensions,
+        );
+        if (result == null || result.files.isEmpty) {
+          return const PlatformCancelled();
+        }
+        files = result.files;
+      } else {
+        final file = await FilePicker.pickFile(
+          type: type,
+          allowedExtensions: allowedExtensions,
+        );
+        if (file == null) {
+          return const PlatformCancelled();
+        }
+        files = [file];
       }
 
       final assets = <PickedAsset>[];
-      for (final file in result.files) {
-        final asset = kIsWeb ? _fromWebBytes(file) : _fromNativePath(file);
+      for (final file in files) {
+        final asset = _fromPlatformFile(file);
         if (asset == null) {
-          // Rare plugin edge cases (path-less Android content providers,
-          // missing web bytes). Fail the whole pick rather than silently
-          // dropping part of the selection.
+          // Rare plugin edge case (a path-less Android content provider).
+          // Fail the whole pick rather than silently dropping a selection.
           return const PlatformFailed('Picked file has no accessible data');
         }
         assets.add(asset);
@@ -303,19 +318,16 @@ final class PluginAssetPicker implements AssetPicker {
     );
   }
 
-  PickedAsset? _fromNativePath(PlatformFile file) {
-    final path = file.path;
-    if (path == null) return null;
-    return _fromXFile(XFile(path, name: file.name));
-  }
-
-  PickedAsset? _fromWebBytes(PlatformFile file) {
-    final bytes = file.bytes;
-    if (bytes == null) return null;
-    return PickedAsset.fromBytes(
-      bytes: bytes,
+  PickedAsset? _fromPlatformFile(PlatformFile file) {
+    // Android SAF without caching yields no path and (on native) no data;
+    // fail the pick rather than return a lazy asset that throws on first
+    // read. On web there is always a blob path to read from.
+    if (!kIsWeb && file.path == null) return null;
+    return PickedAsset.lazy(
       mimeType: mimeTypeFromFileName(file.name),
       fileName: file.name,
+      readBytes: file.readAsBytes,
+      readStream: file.readAsByteStream,
     );
   }
 

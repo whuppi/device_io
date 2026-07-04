@@ -104,8 +104,8 @@ default silently drops web. `make platforms` (pana) guards this.
 bind: saver, opener, and sharer import `dart:io` on one side and
 `package:web` on the other. The picker has **one** implementation for all
 platforms — the underlying image_picker / file_picker plugins are already
-federated, and its two true divergences (camera capture support, web file
-picks having no lazy handle) are `kIsWeb`/`defaultTargetPlatform`
+federated, and its two true divergences (camera capture support; a
+path-less-file guard that only fires off-web) are `kIsWeb`/`defaultTargetPlatform`
 branches, not file splits. A per-platform pair there would be a fake
 matrix: two near-identical copies.
 

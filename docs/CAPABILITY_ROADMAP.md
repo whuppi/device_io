@@ -16,7 +16,7 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Pick single image (gallery) | DONE | Lazy XFile-backed reads on every platform |
 | Pick multiple images (+ limit) | DONE | Empty selection = `Cancelled`, never an empty list |
 | Camera capture | DONE | Phones/tablets — native apps AND mobile browsers (capture attribute). Desktop is `Unsupported` (verified: desktop impls throw without a camera delegate) |
-| Pick single / multiple files (+ extension filter) | DONE | Native lazy via cached path; web lazy via File System Access where present, eager `withData` fallback |
+| Pick single / multiple files (+ extension filter) | DONE | Native lazy via cached path; web lazy via File System Access where present, otherwise file_picker's `readAsBytes` (single lazy; a multi-pick buffers up front) |
 | Permission mapping | DONE | Exact image_picker codes → `PlatformPermissionDenied`; file_picker's SAF needs none |
 | Pick video / mixed media | DONE | `pickVideo` / `captureVideo` / `pickMedia` / `pickMultipleMedia`, lazy like every pick; `maxDuration` honored for camera recording only (plugin behavior, documented); no permission codes exist beyond the four mapped (verified against plugin source) |
 | Lazy web file picks | DONE | `showOpenFilePicker` (Chromium) behind a stub-default conditional export; blob-backed handles read on demand; `withData` fallback on Firefox/Safari |
