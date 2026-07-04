@@ -38,6 +38,7 @@ import 'package:share_plus_platform_interface/share_plus_platform_interface.dart
 
 import 'package:device_io/src/sharing/native/native_sharing_adapter.dart';
 import 'package:device_io/src/sharing/share_file.dart';
+import 'package:device_io/src/sharing/share_origin.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
 import '../harness/bytes.dart';
@@ -69,12 +70,12 @@ void main() {
   test(
     'shareText records exact text/subject/origin and returns Supported',
     () async {
-      const rect = Rect.fromLTWH(1, 2, 3, 4);
+      const origin = ShareOrigin.fromLTWH(1, 2, 3, 4);
 
       final result = await adapter.shareText(
         text: 'hello world',
         subject: 'greeting',
-        sharePositionOrigin: rect,
+        sharePositionOrigin: origin,
       );
 
       expect(result, isA<PlatformSupported<void>>());
@@ -82,7 +83,8 @@ void main() {
       final params = share.lastParams!;
       expect(params.text, 'hello world');
       expect(params.subject, 'greeting');
-      expect(params.sharePositionOrigin, rect);
+      // The adapter maps ShareOrigin → share_plus's dart:ui Rect at the seam.
+      expect(params.sharePositionOrigin, const Rect.fromLTWH(1, 2, 3, 4));
       expect(params.files, anyOf(isNull, isEmpty));
     },
     timeout: t(3),
@@ -170,7 +172,7 @@ void main() {
       final a = patternedBytes(64);
       final b = utf8SampleBytes;
       final c = patternedBytes(128);
-      const rect = Rect.fromLTWH(5, 6, 7, 8);
+      const origin = ShareOrigin.fromLTWH(5, 6, 7, 8);
 
       final result = await adapter.shareFiles(
         files: [
@@ -178,7 +180,7 @@ void main() {
           ShareFile(bytes: b, fileName: 'b.csv'),
           ShareFile(bytes: c, fileName: 'a.png'), // duplicate name
         ],
-        sharePositionOrigin: rect,
+        sharePositionOrigin: origin,
       );
 
       expect(result, isA<PlatformSupported<void>>());
@@ -204,7 +206,10 @@ void main() {
       expect(files[1].mimeType, 'text/csv');
       expect(files[2].mimeType, 'image/png');
 
-      expect(share.lastParams!.sharePositionOrigin, rect);
+      expect(
+        share.lastParams!.sharePositionOrigin,
+        const Rect.fromLTWH(5, 6, 7, 8),
+      );
     }, timeout: t(3));
 
     test(

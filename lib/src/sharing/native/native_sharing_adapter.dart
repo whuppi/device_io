@@ -15,6 +15,7 @@ import 'package:share_plus_platform_interface/share_plus_platform_interface.dart
 
 import 'package:device_io/src/_shared/native_fs.dart';
 import 'package:device_io/src/sharing/share_file.dart';
+import 'package:device_io/src/sharing/share_origin.dart';
 import 'package:device_io/src/sharing/sharing_adapter.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';
@@ -27,14 +28,14 @@ final class NativeSharingAdapter implements SharingAdapter {
   Future<PlatformResult<void>> shareText({
     required String text,
     String? subject,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) async {
     try {
       final result = await SharePlatform.instance.share(
         ShareParams(
           text: text,
           subject: subject,
-          sharePositionOrigin: sharePositionOrigin,
+          sharePositionOrigin: _toRect(sharePositionOrigin),
         ),
       );
       return _fromShareResult(result);
@@ -51,7 +52,7 @@ final class NativeSharingAdapter implements SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) {
     return _shareStagedFile(
       fileName: fileName,
@@ -68,7 +69,7 @@ final class NativeSharingAdapter implements SharingAdapter {
     required List<ShareFile> files,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) async {
     if (files.isEmpty) {
       throw ArgumentError.value(files, 'files', 'must not be empty');
@@ -98,7 +99,7 @@ final class NativeSharingAdapter implements SharingAdapter {
           ],
           subject: subject,
           text: text,
-          sharePositionOrigin: sharePositionOrigin,
+          sharePositionOrigin: _toRect(sharePositionOrigin),
         ),
       );
       return _fromShareResult(result);
@@ -119,7 +120,7 @@ final class NativeSharingAdapter implements SharingAdapter {
     String? mimeType,
     String? subject,
     String? text,
-    Rect? sharePositionOrigin,
+    ShareOrigin? sharePositionOrigin,
   }) {
     return _shareStagedFile(
       fileName: fileName,
@@ -143,7 +144,7 @@ final class NativeSharingAdapter implements SharingAdapter {
     required String? mimeType,
     required String? subject,
     required String? text,
-    required Rect? sharePositionOrigin,
+    required ShareOrigin? sharePositionOrigin,
     required Future<void> Function(File file) writeTo,
   }) async {
     try {
@@ -163,7 +164,7 @@ final class NativeSharingAdapter implements SharingAdapter {
           ],
           subject: subject,
           text: text,
-          sharePositionOrigin: sharePositionOrigin,
+          sharePositionOrigin: _toRect(sharePositionOrigin),
         ),
       );
       return _fromShareResult(result);
@@ -176,6 +177,13 @@ final class NativeSharingAdapter implements SharingAdapter {
       );
     }
   }
+
+  /// share_plus's popover anchor is a `dart:ui.Rect`; device_io's public API
+  /// is Flutter-free ([ShareOrigin]), so the mapping lives here, at the plugin
+  /// boundary — the one place `dart:ui` is genuinely unavoidable.
+  Rect? _toRect(ShareOrigin? origin) => origin == null
+      ? null
+      : Rect.fromLTWH(origin.left, origin.top, origin.width, origin.height);
 
   /// `unavailable` means the platform cannot report an outcome — the sheet
   /// was still shown, so it maps to success, not to a failure.
