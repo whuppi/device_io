@@ -66,7 +66,7 @@ dependencies:
   device_io:
 ```
 
-Then call `initDeviceIO()` once at startup and hold onto the result (see [Quick start](#quick-start)). The picker, share, save, and open plugins underneath are federated across all six platforms, so there's no per-platform Dart to wire up. What each platform *does* need is the permission and entitlement declarations below — the OS requires them, and no package can add them to your app for you.
+Then call `DeviceIO()` once at startup and hold onto the result (see [Quick start](#quick-start)). The picker, share, save, and open plugins underneath are federated across all six platforms, so there's no per-platform Dart to wire up. What each platform *does* need is the permission and entitlement declarations below — the OS requires them, and no package can add them to your app for you.
 
 ### iOS
 
@@ -99,12 +99,12 @@ The App Sandbox gates file access behind entitlements. Add these to **both** `ma
 <!-- saveAs + file picking — locations the user chooses in a dialog -->
 <key>com.apple.security.files.user-selected.read-write</key>
 <true/>
-<!-- silent saveToDevice into the real Downloads folder -->
+<!-- silent save into the real Downloads folder -->
 <key>com.apple.security.files.downloads.read-write</key>
 <true/>
 ```
 
-Skip the Downloads entitlement if you only ever use `saveAs`; a silent `saveToDevice` returns `PlatformFailed` without it.
+Skip the Downloads entitlement if you only ever use `saveAs`; a silent `save` returns `PlatformFailed` without it.
 
 ### Linux, Windows, Web
 
@@ -120,14 +120,14 @@ Initialize once, then reach for the four capabilities off the returned container
 import 'package:device_io/device_io.dart';
 
 // once, at app startup — keep the instance around
-final deviceIO = await initDeviceIO(
-  config: DeviceIOConfig(downloadSubfolder: 'MyApp'),
+final deviceIO = DeviceIO(
+  config: DeviceIOConfig(downloadsSubfolder: 'MyApp'),
 );
 
 // pick, then share the bytes
-final picked = await deviceIO.assetPicker.pickImage();
-if (picked case PlatformSupported(value: final asset)) {
-  await deviceIO.sharing.shareFile(
+final picked = await deviceIO.picker.pickImage();
+if (picked case PlatformSuccess(value: final asset)) {
+  await deviceIO.sharer.shareFile(
     bytes: await asset.readBytes(),
     fileName: asset.fileName ?? 'photo.png',
     text: 'Look at this!',
@@ -135,12 +135,12 @@ if (picked case PlatformSupported(value: final asset)) {
 }
 ```
 
-That's the shape of every call: ask a capability, get a `PlatformResult`, match the outcome you care about. `pickImage`, `shareFile`, `saveToDevice`, `openBytes` — same shape, a different verb. The `if (... case ...)` above handles just the happy path; when you want to react to every outcome, `switch` over the sealed result and let the compiler check you covered each arm:
+That's the shape of every call: ask a capability, get a `PlatformResult`, match the outcome you care about. `pickImage`, `shareFile`, `save`, `openBytes` — same shape, a different verb. The `if (... case ...)` above handles just the happy path; when you want to react to every outcome, `switch` over the sealed result and let the compiler check you covered each arm:
 
 ```dart
-final result = await deviceIO.assetPicker.pickImage();
+final result = await deviceIO.picker.pickImage();
 switch (result) {
-  case PlatformSupported(:final value):
+  case PlatformSuccess(:final value):
     await upload(await value.readBytes());
   case PlatformCancelled():
     break; // user changed their mind — not an error
@@ -161,30 +161,32 @@ Every method returns a `PlatformResult<T>`. Five outcomes, each a distinct value
 
 | Variant | Means | Typical handling |
 |---|---|---|
-| `PlatformSupported(value)` | It worked; `value` is the payload | Use it |
+| `PlatformSuccess(value)` | It worked; `value` is the payload | Use it |
 | `PlatformCancelled()` | User dismissed the picker / share sheet / dialog | Do nothing |
 | `PlatformUnsupported(reason)` | Not available on this platform | Hide the feature |
 | `PlatformPermissionDenied()` | OS blocked access (camera, photos, storage) | Point the user at Settings |
 | `PlatformFailed(message, error, stackTrace)` | Supported, but failed at runtime | Show / report the error |
 
-`PlatformPermissionDenied` extends `PlatformFailed`, so a bare `case PlatformFailed()` catches it too — put the specific arm *before* the generic one when denial deserves its own recovery (send the user to Settings), or drop it and let the failure arm handle everything. The payload inside `PlatformSupported` is never null.
+`PlatformPermissionDenied` extends `PlatformFailed`, so a bare `case PlatformFailed()` catches it too — put the specific arm *before* the generic one when denial deserves its own recovery (send the user to Settings), or drop it and let the failure arm handle everything. The payload inside `PlatformSuccess` is never null.
 
-Two shortcuts when a full `switch` is more than you need:
+Consume it with an exhaustive `switch` — the compiler makes sure you handle every outcome:
 
 ```dart
-// just want the value, don't care why it's missing
-final PickedAsset? asset = result.valueOrNull;
-
-// collapse to one type without a switch statement
-final label = result.when(
-  supported: (asset) => asset.fileName ?? 'file',
-  cancelled: () => 'cancelled',
-  unsupported: (reason) => reason,
-  failed: (message, error) => message,
-);
+switch (await deviceIO.picker.pickImage()) {
+  case PlatformSuccess(:final value):
+    await upload(await value.readBytes());
+  case PlatformCancelled():
+    break; // nothing to do
+  case PlatformPermissionDenied():
+    openAppSettings();
+  case PlatformUnsupported(:final reason):
+    hideFeature(reason);
+  case PlatformFailed(:final message):
+    showError(message);
+}
 ```
 
-`when` folds permission-denied into `failed` — reach for the `switch` when it needs its own path.
+There are deliberately no `isSupported` / `valueOrNull` / `when` shortcuts: a sealed result consumed through an escape hatch stops being exhaustive, and the point is that the compiler catches the outcome you forgot.
 
 <details>
 <summary><b>🧩 why a sealed result instead of just throwing?</b></summary>
@@ -205,14 +207,14 @@ Throws are kept for one thing only: **programmer error**. Pass an empty list to 
 
 ## Usage
 
-Four doors off the container: `assetPicker`, `sharing`, `download`, `fileOpener`. Pick the one that fits what you're doing. Highlights below; every method and full signature lives in the [API reference](https://pub.dev/documentation/device_io/latest/).
+Four doors off the container: `picker`, `sharer`, `saver`, `opener`. Pick the one that fits what you're doing. Highlights below; every method and full signature lives in the [API reference](https://pub.dev/documentation/device_io/latest/).
 
 ### Pick
 
-`deviceIO.assetPicker` covers images, video, mixed media, and generic files — single or multi.
+`deviceIO.picker` covers images, video, mixed media, and generic files — single or multi.
 
 ```dart
-final picker = deviceIO.assetPicker;
+final picker = deviceIO.picker;
 
 // images
 await picker.pickImage(maxWidth: 1024, imageQuality: 85);
@@ -239,7 +241,7 @@ if (picker.isCameraSupported) showCameraButton();
 Camera capture runs on phones and tablets — native apps and mobile browsers alike. Desktop returns `PlatformUnsupported`. For `pickMedia`, branch on the result's `mimeType` to tell an image from a video:
 
 ```dart
-if (result case PlatformSupported(:final value)) {
+if (result case PlatformSuccess(:final value)) {
   final isVideo = value.mimeType.startsWith('video/');
 }
 ```
@@ -259,7 +261,7 @@ final chunks = asset.readStream();          // Stream<List<int>>, constant memor
 Use `readBytes()` for avatars and thumbnails. Use `readStream()` for photos, videos, model files — anything you'd rather not hold in RAM. Pipe the stream straight into a save without buffering:
 
 ```dart
-await deviceIO.download.saveStreamToDevice(
+await deviceIO.saver.saveStream(
   byteStream: asset.readStream(),
   fileName: asset.fileName ?? 'video.mp4',
 );
@@ -275,10 +277,10 @@ Each `readStream()` call returns a **fresh** stream, so you can read the same as
 
 ### Share
 
-`deviceIO.sharing` opens the OS share sheet (Web Share API on web). Text, one file, many files, or a stream — the adapter stages temp files for you.
+`deviceIO.sharer` opens the OS share sheet (Web Share API on web). Text, one file, many files, or a stream — the adapter stages temp files for you.
 
 ```dart
-final sharing = deviceIO.sharing;
+final sharing = deviceIO.sharer;
 
 await sharing.shareText(text: 'Check this out', subject: 'A link');
 
@@ -321,38 +323,42 @@ Filenames are sanitized before they touch the path (traversal sequences, Windows
 
 ### Save
 
-`deviceIO.download` has two doors. `saveToDevice` writes silently; `saveAs` asks the user where.
+`deviceIO.saver` has two doors. `save` writes silently; `saveAs` asks the user where.
 
 ```dart
-final download = deviceIO.download;
+final saver = deviceIO.saver;
 
-// silent, no dialog — returns the path (null on web)
-final result = await download.saveToDevice(bytes: csvBytes, fileName: 'export.csv');
+// silent, no dialog
+final result = await saver.save(bytes: csvBytes, fileName: 'export.csv');
+if (result case PlatformSuccess(value: SavedAtPath(:final path))) {
+  // native: a real path you can reopen. On web it's SavedByBrowser instead —
+  // the browser owns the file, there is no path.
+}
 
 // user picks the destination via the system dialog
-await download.saveAs(bytes: pdfBytes, fileName: 'report.pdf', dialogTitle: 'Save report');
+await saver.saveAs(bytes: pdfBytes, fileName: 'report.pdf', dialogTitle: 'Save report');
 
 // stream a big file to disk chunk by chunk (constant memory on native)
-await download.saveStreamToDevice(byteStream: asset.readStream(), fileName: 'video.mp4');
+await saver.saveStream(byteStream: asset.readStream(), fileName: 'video.mp4');
 ```
 
-**Read this before you rely on `saveToDevice` on a phone.** On desktop it writes to the real Downloads folder. On mobile it writes to an **app-private** downloads folder (`Android/data/<pkg>/files/Download`, the iOS sandbox Downloads dir) — the user won't find it in their Files or Downloads app, and it's deleted on uninstall. For a save the user can actually see on mobile, use `saveAs`, which routes through the Android create-document dialog (public storage, no permissions) and the iOS Files export sheet.
+**Read this before you rely on `save` on a phone.** On desktop it writes to the real Downloads folder. On mobile it writes to an **app-private** downloads folder (`Android/data/<pkg>/files/Download`, the iOS sandbox Downloads dir) — the user won't find it in their Files or Downloads app, and it's deleted on uninstall. For a save the user can actually see on mobile, use `saveAs`, which routes through the Android create-document dialog (public storage, no permissions) and the iOS Files export sheet.
 
 Silent saves never clobber an existing file: a taken `report.pdf` becomes `report (1).pdf`, matching browser behavior, and unsafe characters in the name are sanitized away. Streaming saves write to a temporary `.part` file that only becomes the final file once the stream completes, so a failed stream leaves nothing behind. `mimeType` sets the blob content type on web; native platforms infer the type from the extension and ignore it.
 
 ### Open
 
-`deviceIO.fileOpener` opens content in the platform's default viewer — Preview, Photos, a browser tab, whatever the OS associates with the type.
+`deviceIO.opener` opens content in the platform's default viewer — Preview, Photos, a browser tab, whatever the OS associates with the type.
 
 ```dart
-final opener = deviceIO.fileOpener;
+final opener = deviceIO.opener;
 
 // works everywhere — native stages a temp file, web opens a blob in a new tab
 await opener.openBytes(bytes: pdfBytes, fileName: 'doc.pdf');
 
-// open a path you already have (native only) — pairs with saveToDevice
-final saved = await download.saveToDevice(bytes: bytes, fileName: 'report.pdf');
-if (saved case PlatformSupported(value: final String path)) {
+// open a path you already have (native only) — pairs with save
+final saved = await download.save(bytes: bytes, fileName: 'report.pdf');
+if (saved case PlatformSuccess(value: final String path)) {
   await opener.openPath(filePath: path);
 }
 ```
@@ -366,9 +372,9 @@ if (saved case PlatformSupported(value: final String path)) {
 When something genuinely breaks, you get a `PlatformFailed` carrying three things: a human-readable `message` for a snackbar, plus the original `error` and its `stackTrace` for logging or crash reporting.
 
 ```dart
-final result = await deviceIO.download.saveAs(bytes: bytes, fileName: 'report.pdf');
+final result = await deviceIO.saver.saveAs(bytes: bytes, fileName: 'report.pdf');
 switch (result) {
-  case PlatformSupported(:final value):
+  case PlatformSuccess(:final value):
     showSaved(value);
   case PlatformCancelled():
     break; // dismissed the dialog — nothing to report
@@ -413,7 +419,7 @@ The six-platform badge is also guarded. A cross-platform Flutter package silentl
 
 The two save doors resolve differently per platform. This is the table to keep in mind:
 
-| | `saveToDevice` (silent) | `saveAs` (user picks) |
+| | `save` (silent) | `saveAs` (user picks) |
 |---|---|---|
 | **Desktop** | Real Downloads folder | Native save dialog |
 | **Android** | App-private dir (hidden from Files, gone on uninstall) | Create-document dialog → public storage |
@@ -438,7 +444,7 @@ You never check any of this yourself. The package picks the best available path 
 
 A short honest list — what the shipped package doesn't do, and what to reach for meanwhile. For the full status-per-capability picture, see the [capability roadmap](docs/CAPABILITY_ROADMAP.md).
 
-- **Silent saves to *public* storage on mobile.** `saveToDevice` on a phone writes to app-private storage (see [Save](#save)). Making it land in public Downloads without a dialog would take first-party MediaStore native code — a step this package deliberately hasn't taken (see the [roadmap](docs/CAPABILITY_ROADMAP.md) for the reasoning). `saveAs` is the user-visible answer: public storage, through the system dialog, no permissions. Need true background exports? [Open an issue](https://github.com/whuppi/device_io/issues) — that's the reopen trigger.
+- **Silent saves to *public* storage on mobile.** `save` on a phone writes to app-private storage (see [Save](#save)). Making it land in public Downloads without a dialog would take first-party MediaStore native code — a step this package deliberately hasn't taken (see the [roadmap](docs/CAPABILITY_ROADMAP.md) for the reasoning). `saveAs` is the user-visible answer: public storage, through the system dialog, no permissions. Need true background exports? [Open an issue](https://github.com/whuppi/device_io/issues) — that's the reopen trigger.
 - **Requesting permissions.** This package *surfaces* denials as `PlatformPermissionDenied`; it doesn't pop the permission prompt or manage the flow. Apps own their permission UX and their Info.plist / manifest entries. For an explicit request-and-check flow, use [`permission_handler`](https://pub.dev/packages/permission_handler).
 - **A viewer widget.** `openBytes` and `openPath` open content in the OS default app — they don't draw it inside your UI. To render a PDF or image on screen, pair this with a viewer package ([`pdfx`](https://pub.dev/packages/pdfx) for PDFs, a gallery widget for images): pick and save here, display there.
 - **`openPath` on web.** Filesystem paths don't exist in the browser, so `openPath` returns `PlatformUnsupported` there. `openBytes` is the web path — hand it the bytes and it opens a blob in a new tab.

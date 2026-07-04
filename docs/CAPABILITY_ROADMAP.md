@@ -9,7 +9,7 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 
 ---
 
-## Picking — `AssetPickerAdapter`
+## Picking — `AssetPicker`
 
 | Capability | Status | Notes |
 |---|---|---|
@@ -21,7 +21,7 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Pick video / mixed media | DONE | `pickVideo` / `captureVideo` / `pickMedia` / `pickMultipleMedia`, lazy like every pick; `maxDuration` honored for camera recording only (plugin behavior, documented); no permission codes exist beyond the four mapped (verified against plugin source) |
 | Lazy web file picks | DONE | `showOpenFilePicker` (Chromium) behind a stub-default conditional export; blob-backed handles read on demand; `withData` fallback on Firefox/Safari |
 
-## Sharing — `SharingAdapter`
+## Sharing — `Sharer`
 
 | Capability | Status | Notes |
 |---|---|---|
@@ -32,7 +32,7 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Share multiple files | DONE | `shareFiles` + the `ShareFile` value type; one staging dir per call with in-call name dedup; empty list throws `ArgumentError` (caller bug) |
 | Share position origin (iPadOS popover anchor) | DONE | `sharePositionOrigin` on every share method; anchors the popover on iPad/Mac, ignored elsewhere (verified against ShareParams docs) |
 
-## Saving — `DownloadAdapter`
+## Saving — `FileSaver`
 
 | Capability | Status | Notes |
 |---|---|---|
@@ -40,10 +40,10 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Silent save (stream) | DONE | `.part`-then-rename; failed stream leaves nothing |
 | `saveAs` via system dialog | DONE | SAF (Android) / Files export (iOS) / native dialog (desktop) / File System Access with download fallback (web); `mimeType` feeds the fallback's blob type |
 | Web streaming `saveAs` writes | DONE | `FileSystemWritableFileStream` on Chromium |
-| Silent save to PUBLIC storage on mobile | WONT_DO (for now) | Android-only gap (desktop/web `saveToDevice` already land user-visible; iOS has no public Downloads at all) whose fix needs first-party MediaStore native code — an identity change from plugin-wrapper to plugin. `saveAs` is the user-visible mobile answer. Revisit if a consumer app needs background exports to public storage. |
+| Silent save to PUBLIC storage on mobile | WONT_DO (for now) | Android-only gap (desktop/web `save` already land user-visible; iOS has no public Downloads at all) whose fix needs first-party MediaStore native code — an identity change from plugin-wrapper to plugin. `saveAs` is the user-visible mobile answer. Revisit if a consumer app needs background exports to public storage. |
 | Silent streaming saves on web | WONT_DO (for now) | A no-dialog streaming write needs a File System Access handle, which only user-initiated dialogs can produce; revisit if a handle-reuse API is added |
 
-## Opening — `FileOpenerAdapter`
+## Opening — `FileOpener`
 
 | Capability | Status | Notes |
 |---|---|---|
