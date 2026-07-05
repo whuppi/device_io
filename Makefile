@@ -12,7 +12,7 @@ TIMEOUT := $(if $(CI),--timeout=30x,)
 VERBOSE := $(if $(CI),--verbose,)
 
 .PHONY: check hooks \
-        analyze analyze-floor platforms format test-guards \
+        analyze analyze-floor lint-shell platforms format test-guards \
         test test-unit test-web \
         test-example test-example-matrix test-example-macos test-example-device \
         test-example-android test-example-ios test-example-linux \
@@ -30,7 +30,7 @@ VERBOSE := $(if $(CI),--verbose,)
 #               Idempotent.
 # ═══════════════════════════════════════════════════════════════════
 
-check: format analyze analyze-floor platforms test-guards test test-example-matrix
+check: format analyze analyze-floor lint-shell platforms test-guards test test-example-matrix
 
 hooks:
 	@git config core.hooksPath .githooks
@@ -52,10 +52,16 @@ hooks:
 #                     excluded on purpose; a consumer sees lib, never your
 #                     tests. Snapshots and restores the lock so a local run
 #                     leaves the tree clean.
-# make platforms      Gate pub.dev platform support: pana must report all
-#                     six platforms, else a regression like an unconditional
-#                     dart:io import silently drops web (the stub-default
-#                     conditional import in runtime/ is what it protects).
+# make platforms      Gate pub.dev platform support via the shared
+#                     platforms_gate.sh (canonical in whuppi/ci, stamped into
+#                     tool/): pana — pinned to PANA_VERSION in tool/versions.env,
+#                     the exact analyzer pub.dev runs — must report all six
+#                     platforms, else a regression like an unconditional dart:io
+#                     import silently drops web (the stub-default conditional
+#                     import in runtime/ is what it protects).
+# make lint-shell     Shell portability gate via the shared lint_shell.sh
+#                     (canonical in whuppi/ci): shellcheck + a bash-3.2 + BSD
+#                     scan over every tracked script and workflow run block.
 # ═══════════════════════════════════════════════════════════════════
 
 format:
@@ -73,9 +79,10 @@ analyze-floor:
 	@echo "✓ floor analyze clean (lockfile restored)"
 
 platforms:
-	@$(DART) pub global activate pana >/dev/null
-	@$(DART) pub global run pana --no-warning --json . 2>/dev/null \
-	  | $(DART) run tool/check_platforms.dart
+	@DART="$(DART)" bash tool/platforms_gate.sh
+
+lint-shell:
+	@bash tool/lint_shell.sh
 
 # ═══════════════════════════════════════════════════════════════════
 # § 2b — Test-suite guards

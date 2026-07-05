@@ -84,10 +84,7 @@ pubspec and `lib/src/version.dart` are placeholders stamped at publish time
 from the changelog's top untagged heading. You only write the changelog
 summary — one untagged version max per lane file.
 
-Pushing a new top heading to a lane changelog on its branch triggers the
-pipeline: **gate** (refuse a lane whose changelog adds >1 unreleased version)
-→ **discover** (stamp the tag tree, create the GitHub release) → **publish**
-(build the pub.dev changelog + README, `dart pub publish`). dev reacts to
-`CHANGELOG.pre.md` (prereleases), prod to `CHANGELOG.md` (stable). Publish
-waits on the branch-named GitHub environment approval, so a human gates every
-pub.dev push.
+The pipeline itself — gate → discover → publish across the two changelog lanes
+(`CHANGELOG.pre.md` for dev/prereleases, `CHANGELOG.md` for prod/stable), and
+the GitHub environment approval that gates every pub.dev push — is the shared
+engine; see whuppi/ci/docs/ARCHITECTURE.md "The release surface".
