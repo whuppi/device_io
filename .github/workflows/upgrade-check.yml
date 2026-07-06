@@ -23,7 +23,8 @@ defaults:
     shell: bash
 
 jobs:
-  upgrade:
+  # Flutter SDK (.fvmrc + example/.fvmrc) + lockfiles, each its own PR.
+  shared:
     permissions:
       contents: write       # pushes the chore/flutter-sdk + chore/lockfiles branches
       pull-requests: write  # opens / edits the upgrade PRs
