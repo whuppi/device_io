@@ -9,7 +9,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)"  srcset="assets/banner_dark-web-min.webp">
     <source media="(prefers-color-scheme: light)" srcset="assets/banner_light-web-min.webp">
-    <img alt="pdf_manipulator — cross-platform PDF manipulation for Dart & Flutter"
+    <img alt="device_io — cross-platform device IO for Flutter"
          src="assets/banner_light-web-min.webp" width="100%">
   </picture>
 </p>
