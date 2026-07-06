@@ -79,7 +79,7 @@ analyze-floor:
 	@echo "✓ floor analyze clean (lockfile restored)"
 
 platforms:
-	@DART="$(DART)" bash tool/platforms_gate.sh
+	@DART="$(DART)" EXPECTED_PLATFORMS="android ios linux macos windows web" bash tool/platforms_gate.sh
 
 lint-shell:
 	@bash tool/lint_shell.sh
@@ -267,7 +267,7 @@ verify-windows:
 
 verify-web:
 	@echo "=== Verify: Web ==="
-	cd example && $(FLUTTER) build web --release $(VERBOSE)
+	@FLUTTER="$(FLUTTER)" bash tool/verify_web_gate.sh
 
 # ═══════════════════════════════════════════════════════════════════
 # § 3c — Build helpers
