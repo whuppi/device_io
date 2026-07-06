@@ -15,10 +15,6 @@ topics:
   - file-io
   - cross-platform
 
-# Not published yet — this line goes away when the repo opens and the
-# release tooling takes over. Consumed by path from sewali + bokumi.
-publish_to: none
-
 environment:
   sdk: ">=3.11.0 <4.0.0"
 
