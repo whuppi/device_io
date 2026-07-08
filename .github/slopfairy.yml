@@ -1,0 +1,46 @@
+# slopfairy config for whuppi/device_io — a cross-platform Dart/Flutter plugin
+# (file/image picker, OS share sheet, save dialog, opener, downloads). Platform
+# channels + platform-specific implementations, no native FFI. Overrides
+# defaults; missing keys use built-in behavior.
+
+reviews:
+  auto_review: true
+  focus_areas:
+    - correctness
+    - target-safety
+  ignore_paths: []
+  path_instructions:
+    - path: "lib/src/**"
+      instructions: >
+        Check per-platform code paths (Android, iOS, macOS, Windows, Linux,
+        web) — a capability present on one target may be absent on another;
+        guard and degrade, never assume. Watch null-safety, async cancellation
+        (a picker the user dismisses, a share the user aborts), and that
+        platform-channel replies are validated before use.
+    - path: ".github/**"
+      instructions: >
+        Check workflow security: pull_request_target must not check out or run
+        PR-head code; untrusted github.event.* values (PR title, branch refs,
+        comment bodies) belong in env:, never interpolated into a run: block;
+        flag rolling action refs (@main / @vN) that should be a pinned SHA or
+        the exact whuppi/ci tag, and any secret exposed to fork code.
+
+triage:
+  auto_label: true
+  auto_assign: false
+
+personality:
+  tone: professional
+  extra_instructions: |
+    This is a PUBLIC Dart/Flutter package on pub.dev. External contributors and
+    users open issues and PRs — be welcoming, patient, and helpful.
+
+    Key facts:
+    - Cross-platform: Android, iOS, macOS, Windows, Linux, Web.
+    - Pure Dart/Flutter (platform channels + federated platform packages), no
+      native FFI build.
+    - CI and releases run on the shared whuppi/ci tooling, pinned to an exact
+      tag; versions and changelogs are managed by that release tooling, not
+      release-please.
+    - Conventional commits enforced. Default branch dev, prod branch for stable
+      releases. Linear chain: feature → dev → prod.

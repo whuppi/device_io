@@ -26,7 +26,7 @@ The load-bearing promises:
    platform, the app receives a typed `PlatformUnsupported` value — not
    an exception, not a crash, not a need for `kIsWeb` in app code.
 2. **Every outcome is a named value.** Operations return the sealed
-   `PlatformResult<T>`: `Supported(value)` / `Cancelled` /
+   `PlatformResult<T>`: `Success(value)` / `Cancelled` /
    `Unsupported(reason)` / `Failed(message, error, stackTrace)`, with
    `PermissionDenied` as a `Failed` subtype (generic handling stays one
    `switch` arm; settings-prompt handling can match it specifically).
@@ -53,26 +53,30 @@ lib/
   src/
     _shared/
       native_fs.dart           ← dart:io helpers: sanitize / reserve / stage
-    download/
-      download_adapter.dart    ← contract: saveToDevice / saveStream / saveAs
-      native/  web/            ← dart:io impl · blob + File System Access impl
     opener/
-      file_opener_adapter.dart ← contract: openBytes / openPath
+      file_opener.dart         ← contract: openBytes / openPath
       native/  web/            ← OS-open + open_filex channel · blob-tab impl
     picker/
-      asset_picker_adapter.dart          ← contract: pick/capture, single+multi
-      picked_asset.dart                  ← lazy value type (no paths, no bytes)
-      plugin_asset_picker_adapter.dart   ← ONE impl, all platforms (§4)
+      asset_picker.dart          ← contract: pick/capture, single+multi
+      image_options.dart         ← resize/quality options (one object, §5)
+      picked_asset.dart          ← lazy value type (no paths, no bytes)
+      plugin_asset_picker.dart   ← ONE impl, all platforms (§4)
       web_file_pick.dart + _stub/_web    ← FSA lazy-pick seam, STUB DEFAULT (§3)
     runtime/
-      device_io.dart           ← the DeviceIO container (four adapter fields)
-      init_device_io.dart      ← conditional export — STUB IS THE DEFAULT (§3)
-      init_device_io_native.dart / _stub.dart / _web.dart
-    sharing/
-      sharing_adapter.dart     ← contract: shareText / shareFile / shareFileStream
+      device_io.dart           ← the DeviceIO container (sync factory + fields)
+      resolve.dart             ← conditional export — STUB IS THE DEFAULT (§3)
+      resolve_native.dart / resolve_stub.dart / resolve_web.dart
+    saver/
+      file_saver.dart          ← contract: save / saveStream / saveAs
+      save_location.dart       ← sealed SavedAtPath / SavedByBrowser
+      native/  web/            ← dart:io impl · blob + File System Access impl
+    sharer/
+      sharer.dart              ← contract: shareText / shareFile / shareFileStream
+      share_file.dart          ← one file passed to shareFiles
+      share_origin.dart        ← Flutter-free iPad popover anchor
       native/  web/            ← share_plus interface impl · Web Share impl
     types/
-      device_io_config.dart    ← DeviceIOConfig for initDeviceIO
+      device_io_config.dart    ← DeviceIOConfig for DeviceIO
       mime_types.dart          ← curated maps + package:mime-backed lookups
       platform_result.dart     ← the sealed result family
     version.dart               ← 0.0.0 placeholder, stamped at release
@@ -84,7 +88,7 @@ lib/
 
 | Situation | Tool | Where |
 |---|---|---|
-| Code cannot compile cross-platform | Conditional import, **stub as default** | `runtime/init_device_io.dart`, `picker/web_file_pick.dart` |
+| Code cannot compile cross-platform | Conditional import, **stub as default** | `runtime/resolve.dart`, `picker/web_file_pick.dart` |
 | Compiles everywhere, behavior differs | `kIsWeb` const branch (tree-shaken) | picker's file-pick path |
 | Browser capability varies at runtime | Feature detection, graceful ladder | web `saveAs` (File System Access → download), Web Share (`hasProperty` → `canShare`) |
 
@@ -97,11 +101,11 @@ default silently drops web. `make platforms` (pana) guards this.
 ## 4. The real-matrix rule
 
 `native/` + `web/` adapter pairs exist ONLY where platform APIs genuinely
-bind: download, opener, and sharing import `dart:io` on one side and
+bind: saver, opener, and sharer import `dart:io` on one side and
 `package:web` on the other. The picker has **one** implementation for all
 platforms — the underlying image_picker / file_picker plugins are already
-federated, and its two true divergences (camera capture support, web file
-picks having no lazy handle) are `kIsWeb`/`defaultTargetPlatform`
+federated, and its two true divergences (camera capture support; a
+path-less-file guard that only fires off-web) are `kIsWeb`/`defaultTargetPlatform`
 branches, not file splits. A per-platform pair there would be a fake
 matrix: two near-identical copies.
 
@@ -166,7 +170,7 @@ alone proves: ...") and a Diet line naming what it consumes:
 
 1. **Mirror suites (VM)** — tests mirror `lib/src/` one concern per
    file: `test/types/`, `test/_shared/`, `test/picker/`,
-   `test/download/`, `test/sharing/`, `test/opener/`. Plugins are never
+   `test/saver/`, `test/sharer/`, `test/opener/`. Plugins are never
    imported; they're substituted at their platform-INTERFACE seams
    (recording fakes in `test/harness/`) or their method channels are
    mocked with the exact protocol verified from plugin source. Native

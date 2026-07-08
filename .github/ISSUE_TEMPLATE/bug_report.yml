@@ -15,7 +15,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Call `deviceIO.download.saveToDevice(...)` with ...
+        1. Call `deviceIO.saver.save(...)` with ...
         2. Then ...
         3. See error / wrong result ...
     validations:
@@ -40,11 +40,11 @@ body:
     attributes:
       label: Capability
       options:
-        - Picking (assetPicker)
-        - Sharing (sharing)
-        - Saving (download)
-        - Opening (fileOpener)
-        - Init / other
+        - Picking (picker)
+        - Sharing (sharer)
+        - Saving (saver)
+        - Opening (opener)
+        - Other
     validations:
       required: true
 

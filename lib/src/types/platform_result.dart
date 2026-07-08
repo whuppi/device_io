@@ -3,22 +3,24 @@ import 'package:meta/meta.dart';
 /// Result of a platform IO operation that may not be supported on all
 /// platforms.
 ///
-/// Four outcomes:
-/// - [PlatformSupported] — operation succeeded with a value
+/// Five outcomes:
+/// - [PlatformSuccess] — operation succeeded with a value
 /// - [PlatformCancelled] — the user dismissed the picker / share sheet
 /// - [PlatformUnsupported] — operation is not available on this platform
 /// - [PlatformFailed] — operation is supported but failed at runtime
 ///   (with [PlatformPermissionDenied] as the named permission failure)
 ///
-/// Pattern-match with a `switch` for exhaustive handling, or use [when]:
+/// Pattern-match with a `switch` for exhaustive handling. There are no
+/// helper getters on purpose — a sealed result consumed through escape
+/// hatches stops being exhaustive.
 ///
 /// ```dart
-/// final result = await deviceIO.assetPicker.pickImage();
+/// final result = await deviceIO.picker.pickImage();
 /// switch (result) {
-///   case PlatformSupported(:final value): use(value);
+///   case PlatformSuccess(:final value): use(value);
 ///   case PlatformCancelled(): break; // user changed their mind
-///   case PlatformUnsupported(:final reason): hideFeature(reason);
 ///   case PlatformPermissionDenied(): promptForSettings();
+///   case PlatformUnsupported(:final reason): hideFeature(reason);
 ///   case PlatformFailed(:final message): showError(message);
 /// }
 /// ```
@@ -26,75 +28,18 @@ import 'package:meta/meta.dart';
 sealed class PlatformResult<T> {
   /// Const base constructor for the sealed subclasses.
   const PlatformResult();
-
-  /// True if this is a [PlatformSupported] result.
-  bool get isSupported => this is PlatformSupported<T>;
-
-  /// True if this is a [PlatformCancelled] result.
-  bool get isCancelled => this is PlatformCancelled<T>;
-
-  /// True if this is a [PlatformUnsupported] result.
-  bool get isUnsupported => this is PlatformUnsupported<T>;
-
-  /// True if this is a [PlatformFailed] result.
-  bool get isFailed => this is PlatformFailed<T>;
-
-  /// Gets the value if supported, or null otherwise.
-  T? get valueOrNull => switch (this) {
-    PlatformSupported(:final value) => value,
-    _ => null,
-  };
-
-  /// Execute a callback based on the result type.
-  ///
-  /// [PlatformPermissionDenied] routes to [failed] — pattern-match with a
-  /// `switch` when it needs distinct handling.
-  R when<R>({
-    required R Function(T value) supported,
-    required R Function() cancelled,
-    required R Function(String reason) unsupported,
-    required R Function(String message, Object? error) failed,
-  }) {
-    return switch (this) {
-      PlatformSupported(:final value) => supported(value),
-      PlatformCancelled() => cancelled(),
-      PlatformUnsupported(:final reason) => unsupported(reason),
-      PlatformFailed(:final message, :final error) => failed(message, error),
-    };
-  }
-
-  /// Map the success value. Every other variant passes through unchanged.
-  PlatformResult<U> map<U>(U Function(T) transform) {
-    return switch (this) {
-      PlatformSupported(:final value) => PlatformSupported(transform(value)),
-      PlatformCancelled() => PlatformCancelled<U>(),
-      PlatformUnsupported(:final reason) => PlatformUnsupported(reason),
-      PlatformPermissionDenied(
-        :final message,
-        :final error,
-        :final stackTrace,
-      ) =>
-        PlatformPermissionDenied<U>(
-          message: message,
-          error: error,
-          stackTrace: stackTrace,
-        ),
-      PlatformFailed(:final message, :final error, :final stackTrace) =>
-        PlatformFailed(message, error: error, stackTrace: stackTrace),
-    };
-  }
 }
 
 /// Operation succeeded with a value.
-final class PlatformSupported<T> extends PlatformResult<T> {
+final class PlatformSuccess<T> extends PlatformResult<T> {
   /// Creates a success result carrying [value].
-  const PlatformSupported(this.value);
+  const PlatformSuccess(this.value);
 
   /// The operation's result value.
   final T value;
 
   @override
-  String toString() => 'PlatformSupported($value)';
+  String toString() => 'PlatformSuccess($value)';
 }
 
 /// The user cancelled the operation — dismissed the picker, the camera,
@@ -122,8 +67,9 @@ final class PlatformUnsupported<T> extends PlatformResult<T> {
 /// Operation is supported but failed at runtime.
 ///
 /// Subtypes name the failures consumers branch on — currently
-/// [PlatformPermissionDenied]. A plain `case PlatformFailed()` arm
-/// matches the subtypes too, so generic handling stays a single arm.
+/// [PlatformPermissionDenied]. A plain `case PlatformFailed()` arm matches
+/// the subtypes too, so generic handling stays a single arm; when a switch
+/// has BOTH arms, the [PlatformPermissionDenied] arm must come first.
 class PlatformFailed<T> extends PlatformResult<T> {
   /// Creates a failure result with a [message], and the caught [error]
   /// plus its [stackTrace] when available.

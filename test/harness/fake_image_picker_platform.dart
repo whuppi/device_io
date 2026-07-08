@@ -3,9 +3,8 @@
 // disables the plugin-interface token check so a test double is accepted.
 //
 // This fake RECORDS the option arguments the adapter routes to each platform
-// method (getImageFromSource / getMultiImageWithOptions / getMedia / getVideo,
-// verified against image_picker 1.2.3's ImagePicker delegation) and returns
-// SCRIPTED XFiles / empty lists / thrown errors. Tests assert both the
+// method (getImageFromSource / getMultiImageWithOptions / getMedia / getVideo)
+// and returns SCRIPTED XFiles / empty lists / thrown errors. Tests assert both the
 // recorded request AND the mapped result, so a gutted adapter that dropped an
 // option or mis-routed a source is caught.
 //
@@ -122,10 +121,14 @@ final class TempWorkspace {
   /// Writes [bytes] to a file named exactly [fileName] in a fresh per-file
   /// subdirectory (so the path's basename IS [fileName] — cross_file's io
   /// `XFile.name` reads the path basename, not any constructor name) and
-  /// returns its path.
+  /// returns its path. Join with [Platform.pathSeparator], never a literal
+  /// `/`: cross_file splits the basename on the platform separator, so on
+  /// Windows (`\`) a `/`-joined subpath stays glued to the name and the
+  /// pick's fileName comes back as the whole relative path.
   String writeFile(String fileName, Uint8List bytes) {
-    final sub = Directory('${_dir.path}/${_seq++}')..createSync();
-    final file = File('${sub.path}/$fileName')..writeAsBytesSync(bytes);
+    final sep = Platform.pathSeparator;
+    final sub = Directory('${_dir.path}$sep${_seq++}')..createSync();
+    final file = File('${sub.path}$sep$fileName')..writeAsBytesSync(bytes);
     return file.path;
   }
 

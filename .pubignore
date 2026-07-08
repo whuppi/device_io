@@ -6,3 +6,9 @@ tool/
 Makefile
 docs/
 .githooks/
+
+# Banner: ship only the optimized .webp files the README embeds. The heavy
+# PNG sources stay tracked in git (org-quality preservation) but out of the
+# published download — nothing references them on pub.dev.
+assets/banner_dark.png
+assets/banner_light.png

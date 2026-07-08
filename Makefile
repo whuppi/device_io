@@ -12,7 +12,7 @@ TIMEOUT := $(if $(CI),--timeout=30x,)
 VERBOSE := $(if $(CI),--verbose,)
 
 .PHONY: check hooks \
-        analyze analyze-floor platforms format test-guards \
+        analyze analyze-floor lint-shell platforms format test-guards \
         test test-unit test-web \
         test-example test-example-matrix test-example-macos test-example-device \
         test-example-android test-example-ios test-example-linux \
@@ -30,7 +30,7 @@ VERBOSE := $(if $(CI),--verbose,)
 #               Idempotent.
 # ═══════════════════════════════════════════════════════════════════
 
-check: format analyze analyze-floor platforms test-guards test test-example-matrix
+check: format analyze analyze-floor lint-shell platforms test-guards test test-example-matrix
 
 hooks:
 	@git config core.hooksPath .githooks
@@ -41,7 +41,10 @@ hooks:
 #
 # make format         Formatter in check mode — fails on unformatted files
 #                     (CI is never the first place the formatter runs).
-# make analyze        Static analysis, strict lints from analysis_options.
+# make analyze        Static analysis via the shared analyze_core.sh (canonical
+#                     in whuppi/ci, stamped into tool/) — a suppression-comment
+#                     ban + dart/flutter analyze --fatal-infos over lib, test,
+#                     tool, and example; an INFO fails like an error.
 # make analyze-floor  Resolve to the OLDEST in-range dependencies and
 #                     analyze the shipped code (lib only). The lower bounds
 #                     are only honest if the code analyzes against them,
@@ -49,17 +52,23 @@ hooks:
 #                     excluded on purpose; a consumer sees lib, never your
 #                     tests. Snapshots and restores the lock so a local run
 #                     leaves the tree clean.
-# make platforms      Gate pub.dev platform support: pana must report all
-#                     six platforms, else a regression like an unconditional
-#                     dart:io import silently drops web (the stub-default
-#                     conditional import in runtime/ is what it protects).
+# make platforms      Gate pub.dev platform support via the shared
+#                     platforms_gate.sh (canonical in whuppi/ci, stamped into
+#                     tool/): pana — pinned to PANA_VERSION in tool/versions.env,
+#                     the exact analyzer pub.dev runs — must report all six
+#                     platforms, else a regression like an unconditional dart:io
+#                     import silently drops web (the stub-default conditional
+#                     import in runtime/ is what it protects).
+# make lint-shell     Shell portability gate via the shared lint_shell.sh
+#                     (canonical in whuppi/ci): shellcheck + a bash-3.2 + BSD
+#                     scan over every tracked script and workflow run block.
 # ═══════════════════════════════════════════════════════════════════
 
 format:
 	$(DART) format --output=none --set-exit-if-changed .
 
 analyze:
-	$(DART) analyze
+	@DART="$(DART)" FLUTTER="$(FLUTTER)" bash tool/analyze_core.sh
 
 analyze-floor:
 	@cp pubspec.lock .pubspec.lock.floor-backup
@@ -70,9 +79,10 @@ analyze-floor:
 	@echo "✓ floor analyze clean (lockfile restored)"
 
 platforms:
-	@$(DART) pub global activate pana >/dev/null
-	@$(DART) pub global run pana --no-warning --json . 2>/dev/null \
-	  | $(DART) run tool/check_platforms.dart
+	@DART="$(DART)" EXPECTED_PLATFORMS="android ios linux macos windows web" bash tool/platforms_gate.sh
+
+lint-shell:
+	@bash tool/lint_shell.sh
 
 # ═══════════════════════════════════════════════════════════════════
 # § 2b — Test-suite guards
@@ -82,7 +92,7 @@ platforms:
 #                      test/web_runners/ (the VM suites must compile
 #                      without a browser target)
 #                    - dart:io outside the native-adapter suites
-#                      (test/_shared, test/download, test/sharing,
+#                      (test/_shared, test/saver, test/sharer,
 #                      test/opener — their SUBJECTS wrap dart:io)
 #                      carries an 'io-exempt: <reason>' comment
 #                    - no direct plugin imports anywhere in test/ —
@@ -131,12 +141,26 @@ test: test-unit test-web
 test-unit:
 	@echo "=== Unit: VM (types + _shared + picker + native adapters) ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/download test/sharing test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
+	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/saver test/sharer test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
 
+# Web suites run under `dart test -p chrome`, NOT flutter test: flutter test
+# boots CanvasKit, which hangs on Windows headless Chrome (flutter#162798).
+# pdf_manipulator passes Chrome --no-sandbox via its dart_test.yaml, but
+# device_io can't: flutter test runs the native-adapter VM suites, reads that
+# same file, and rejects a chrome platform override in VM mode. So on Linux CI
+# (ubuntu 24.04's AppArmor kills Chrome's sandbox under dart test), point
+# CHROME_EXECUTABLE at a wrapper adding the same --no-sandbox flag. Windows and
+# macOS need no flag, and the CI sets CHROME_EXECUTABLE there.
 test-web:
-	@echo "=== Web adapters: real Chrome ==="
+	@echo "=== Web adapters: real Chrome (dart test -p chrome) ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) --platform chrome test/web_runners --file-reporter json:$(TEST_RESULTS_DIR)/web.json
+	@if [ "$$(uname -s)" = "Linux" ] && [ -n "$$CI" ]; then \
+	  base="$${CHROME_EXECUTABLE:-$$(command -v google-chrome-stable || command -v google-chrome || command -v chromium)}"; \
+	  printf '#!/bin/sh\nexec "%s" --no-sandbox --disable-gpu "$$@"\n' "$$base" > $(TEST_RESULTS_DIR)/chrome-ci; \
+	  chmod +x $(TEST_RESULTS_DIR)/chrome-ci; \
+	  export CHROME_EXECUTABLE="$$PWD/$(TEST_RESULTS_DIR)/chrome-ci"; \
+	fi; \
+	$(DART) test $(TIMEOUT) -p chrome test/web_runners --concurrency=1 --file-reporter json:$(TEST_RESULTS_DIR)/web.json
 
 # ═══════════════════════════════════════════════════════════════════
 # § 3b — Example tests
@@ -243,7 +267,7 @@ verify-windows:
 
 verify-web:
 	@echo "=== Verify: Web ==="
-	cd example && $(FLUTTER) build web --release $(VERBOSE)
+	@FLUTTER="$(FLUTTER)" bash tool/verify_web_gate.sh
 
 # ═══════════════════════════════════════════════════════════════════
 # § 3c — Build helpers

@@ -23,7 +23,7 @@ void main() {
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    deviceIO = await initDeviceIO();
+    deviceIO = DeviceIO();
   });
 
   setUp(() {

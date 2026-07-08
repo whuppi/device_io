@@ -2,7 +2,7 @@
 // File System Access path, reached through the web_file_pick.dart platform
 // seam) against an instrumented showOpenFilePicker: with the picker DELETED it
 // returns null (falls through to the file_picker ladder); overridden to resolve
-// real File-backed handles it returns Supported assets that are LAZY (readBytes
+// real File-backed handles it returns Success assets that are LAZY (readBytes
 // yields the exact declared bytes; readStream is fresh per call and completes
 // twice), derive mimeType from file.type and, when type is empty, from the
 // fileName; the recorded options carry multiple:false/true and, for
@@ -89,7 +89,7 @@ void main() {
     timeout: t(4),
   );
 
-  // ── resolve real handles → Supported, lazy, exact bytes ──
+  // ── resolve real handles → Success, lazy, exact bytes ──
 
   test(
     'resolves lazy assets whose readBytes yields the exact declared bytes',
@@ -100,8 +100,8 @@ void main() {
       ]);
 
       final result = await lazyWebFilePick(allowMultiple: false);
-      expect(result, isA<PlatformSupported<List<PickedAsset>>>());
-      final assets = (result! as PlatformSupported<List<PickedAsset>>).value;
+      expect(result, isA<PlatformSuccess<List<PickedAsset>>>());
+      final assets = (result! as PlatformSuccess<List<PickedAsset>>).value;
       expect(assets.length, 1);
 
       final asset = assets.first;
@@ -132,7 +132,7 @@ void main() {
       fileHandle(bytes: utf8SampleBytes, name: 'note.txt', type: ''),
     ]);
     final result = await lazyWebFilePick(allowMultiple: false);
-    final assets = (result! as PlatformSupported<List<PickedAsset>>).value;
+    final assets = (result! as PlatformSuccess<List<PickedAsset>>).value;
     expect(assets.single.mimeType, 'text/plain'); // inferred from '.txt'
   }, timeout: t(4));
 
