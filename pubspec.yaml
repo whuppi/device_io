@@ -1,8 +1,9 @@
 name: device_io
 version: 0.0.0
 description: >-
-  Cross-platform device IO for Flutter: pick, share, save, and open files.
-  One API on iOS, Android, macOS, Windows, Linux, and web.
+  Cross-platform file picking, saving, sharing, and opening for Flutter.
+  Image and file pickers, save dialogs, OS share sheet, open-with — one
+  API on mobile, desktop, and web.
 homepage: https://github.com/whuppi/device_io
 repository: https://github.com/whuppi/device_io
 issue_tracker: https://github.com/whuppi/device_io/issues

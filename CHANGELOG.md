@@ -57,3 +57,7 @@ CONTENT RULES (never change)
     docs/CAPABILITY_ROADMAP.md; the changelog says only what CHANGED.
 ═══════════════════════════════════════════════════════════════════════
 -->
+
+## 1.0.0
+
+First stable release — pick, save, share, and open files with one Flutter API.
