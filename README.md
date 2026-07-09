@@ -238,6 +238,9 @@ await picker.pickMultipleMedia(limit: 10);  // images and/or videos
 // generic files, optionally filtered by extension
 await picker.pickFile(allowedExtensions: ['mp3', 'wav']);
 await picker.pickFiles();
+
+// a folder — feeds saveInto for pick-once-save-many (Unsupported on web)
+await picker.pickDirectory(dialogTitle: 'Choose an export folder');
 ```
 
 A few notes:
@@ -366,7 +369,7 @@ if (dir case Success(:final value)) {
 }
 ```
 
-**Before you rely on `save` on a phone:** it writes to an **app-private** folder there (invisible in the Files app, gone on uninstall). For a save the user can find, use `saveAs` (system dialog, public storage, no permissions).
+**Before you rely on `save` on a phone:** it writes to an **app-private** folder there (invisible in the Files app, gone on uninstall). For a save the user can find, use `saveAs` (system dialog, public storage, no permissions). And if the file was never *for* the user — you're storing your app's own data — reach for a storage engine like [`cellar_flutter`](https://pub.dev/packages/cellar_flutter) instead of a save door.
 
 `pickDirectory` + `saveInto` is the pick-once-save-many flow: one folder dialog, then any number of silent saves into it, each with the same sanitize + no-clobber guarantees as `save`. Both return `Unsupported` on web (browsers expose no directory paths) — `saveAs` per file is the web equivalent.
 
@@ -432,7 +435,40 @@ Permission denials arrive as `PermissionDenied` (a `Failed` subtype, see [Result
 
 ## Platform support
 
-One API, six targets. Each capability is backed by a federated plugin (or a web API):
+One API, six targets. The matrix below is per **method**, and every cell is a typed answer:
+
+- ✅ **works** — same call, same result shape
+- ⚠️ **works, with a platform nuance** — see the matching note
+- ❌ **returns `Unsupported`** — a typed result your code can branch on, never a crash or a silent no-op
+
+| What you call | Android | iOS | macOS | Windows | Linux | Web |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Pick images / videos / media | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Pick generic files | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️¹ |
+| Camera capture | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️² |
+| `pickDirectory` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Share text / files / streams | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️³ |
+| `save` / `saveStream` (silent) | ⚠️⁴ | ⚠️⁴ | ✅ | ✅ | ✅ | ⚠️⁵ |
+| `saveAs` (dialog) | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️⁶ |
+| `saveInto` (picked folder) | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `openBytes` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `openPath` / `open(SaveLocation)` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+1. Single file picks read lazily everywhere. A **multi**-file pick buffers up front on Firefox/Safari (no File System Access there); Chromium stays lazy.
+2. Mobile browsers ✅ (the file input's `capture` attribute). Desktop browsers ❌ — same as desktop apps.
+3. Rides the browser's Web Share API: needs HTTPS, and *file* sharing is supported in fewer browsers than text. Where it's absent you get `Unsupported`, not a broken sheet.
+4. Saves succeed but land in **app-private** storage — invisible in the Files app, gone on uninstall. For a save the user can find, use `saveAs`. Details in [Where saves land](#where-saves-land).
+5. Becomes a browser download — the browser decides the location, and a stream is buffered first (browsers can't stream without a dialog).
+6. File System Access dialog on Chromium (real streaming writes); plain download on Firefox/Safari.
+
+The rule behind every ❌ and ⚠️: **the package never guesses.** Where a platform can't do something you get a typed `Unsupported` to branch on — hide the button, or fall back (`openBytes` instead of `openPath`, `saveAs` instead of `saveInto`). Your app never writes `kIsWeb`.
+
+<details>
+<summary><b>🧩 what's under each verb?</b></summary>
+
+<br>
+
+Each capability wraps the battle-tested federated plugin for its job — this package adds the typed results, the lazy reads, and the cross-platform honesty on top:
 
 | Capability | Android | iOS | macOS | Windows | Linux | Web |
 |---|---|---|---|---|---|---|
@@ -440,15 +476,6 @@ One API, six targets. Each capability is backed by a federated plugin (or a web 
 | **Share** | share_plus | share_plus | share_plus | share_plus | share_plus | Web Share API |
 | **Save** | path_provider / SAF dialog | path_provider / Files export | path_provider / native dialog | path_provider / native dialog | path_provider / native dialog | blob download / File System Access |
 | **Open** | open_filex | open_filex | OS open | OS open | OS open | blob in new tab |
-
-Camera capture is available on phones and tablets (native apps and mobile browsers) and returns `Unsupported` on desktop.
-
-<details>
-<summary><b>🧩 how does one API stay honest across six platforms?</b></summary>
-
-<br>
-
-Where a platform can't do something, you get a typed `Unsupported` — never a silent no-op, never a faked success. `openPath` on web returns `Unsupported` because browsers have no filesystem paths; camera capture returns `Unsupported` on desktop. Your app never writes `kIsWeb`, and never gets a fake answer.
 
 How the six-platform guarantee holds under the hood is in [Architecture](docs/ARCHITECTURE.md).
 
@@ -469,15 +496,9 @@ On web, the Chromium save dialog comes from the File System Access API, writing 
 
 `saveInto` writes to whatever directory you hand it — typically one from `pickDirectory` — so it lands wherever the user chose. Both are native-only (`Unsupported` on web).
 
-### Browser support
+### Which browsers?
 
-There's no minimum-version table, because the web layer **feature-detects at runtime and degrades gracefully** instead of gating on a version:
-
-- **File System Access** (the `saveAs` dialog, lazy file-pick reads) is Chromium-only. Where it's absent (Firefox, Safari), `saveAs` becomes a plain download and a *multi*-file pick buffers up front (single picks still read lazily).
-- **Web Share** availability varies by browser and by whether the page is served over HTTPS. A dismissed sheet comes back as `Cancelled`.
-- **Camera capture** works in mobile browsers (the file input's `capture` attribute); desktop browsers report `Unsupported`.
-
-You never check any of this. The package picks the best path and hands you the same `Outcome` regardless.
+All of them — you don't pick a minimum browser, and you don't check one either. Every call looks at what the user's browser can actually do **at that moment** and takes the best route it finds: Chrome gets the nicer paths (a real save dialog, files read only when needed), Firefox and Safari get the simpler ones (a plain download, files read up front). That's all the ⚠️ web notes in the matrix are. Your code sees the same `Outcome` either way.
 
 ---
 
@@ -492,6 +513,7 @@ What the shipped package doesn't do, and what to reach for meanwhile. For the fu
 - **Drag-and-drop.** A drop target is a widget — a UI concern this package deliberately stays out of. Use [`desktop_drop`](https://pub.dev/packages/desktop_drop) for the drop surface; the dropped bytes flow straight into `share` / `save` / `openBytes` here.
 - **Progress callbacks.** None of the wrapped plugins expose byte-level progress hooks. If you need one for a big save, count chunks in your own stream before handing it to `saveStream` — the stream seam makes that a five-line wrapper on the caller's side.
 - **Opening URLs.** `open*` is for files/bytes, not links. [`url_launcher`](https://pub.dev/packages/url_launcher) owns URI opening; wrapping it here would add a dependency without adding a guarantee.
+- **Storing your app's own files.** Every door here moves files between your app and the **user** (their picker, their share sheet, their Downloads). Files your app keeps for itself — caches, user content, databases of blobs — belong in a storage engine: [`cellar_flutter`](https://pub.dev/packages/cellar_flutter) gives you a ready-made one on the same six platforms (scoping, encryption seam, streaming, atomic writes). Save here when the user should see the file; store there when they shouldn't.
 
 ---
 
