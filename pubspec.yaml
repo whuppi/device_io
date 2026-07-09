@@ -1,5 +1,5 @@
 name: device_io
-version: 0.0.0
+version: 1.0.0
 description: >-
   Cross-platform file picking, saving, sharing, and opening for Flutter.
   Image and file pickers, save dialogs, OS share sheet, open-with — one
