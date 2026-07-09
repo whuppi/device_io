@@ -124,7 +124,7 @@ The App Sandbox gates file access behind entitlements. Add these to **both** `ma
 <true/>
 ```
 
-Skip the Downloads entitlement if you only use `saveAs` — a silent `save` returns `PlatformFailed` without it.
+Skip the Downloads entitlement if you only use `saveAs` — a silent `save` returns `Failed` without it.
 
 ### Linux, Windows, Web
 
@@ -146,7 +146,7 @@ final deviceIO = DeviceIO(
 
 // pick, then share the bytes
 final picked = await deviceIO.picker.pickImage();
-if (picked case PlatformSuccess(value: final asset)) {
+if (picked case Success(value: final asset)) {
   await deviceIO.sharer.shareFile(
     bytes: await asset.readBytes(),
     fileName: asset.fileName ?? 'photo.png',
@@ -155,7 +155,7 @@ if (picked case PlatformSuccess(value: final asset)) {
 }
 ```
 
-That's the shape of every call: ask a capability, get a `PlatformResult`, match the outcome you care about. `pickImage`, `shareFile`, `save`, `openBytes` — same shape, a different verb.
+That's the shape of every call: ask a capability, get a `Outcome`, match the outcome you care about. `pickImage`, `shareFile`, `save`, `openBytes` — same shape, a different verb.
 
 The `if (... case ...)` above handles just the happy path. To react to *every* outcome, `switch` over the sealed result and let the compiler check each arm (see [Results](#results)).
 
@@ -163,36 +163,36 @@ The `if (... case ...)` above handles just the happy path. To react to *every* o
 
 ## Results
 
-Every method returns a `PlatformResult<T>`. Five outcomes, each a distinct value:
+Every method returns a `Outcome<T>`. Five outcomes, each a distinct value:
 
 | Variant | Means | Typical handling |
 |---|---|---|
-| `PlatformSuccess(value)` | It worked; `value` is the payload | Use it |
-| `PlatformCancelled()` | User dismissed the picker / sheet / dialog | Do nothing |
-| `PlatformUnsupported(reason)` | Not available on this platform | Hide the feature |
-| `PlatformPermissionDenied()` | OS blocked access (camera, photos, storage) | Point the user at Settings |
-| `PlatformFailed(message, error, stackTrace)` | Supported, but failed at runtime | Show / report the error |
+| `Success(value)` | It worked; `value` is the payload | Use it |
+| `Cancelled()` | User dismissed the picker / sheet / dialog | Do nothing |
+| `Unsupported(reason)` | Not available on this platform | Hide the feature |
+| `PermissionDenied()` | OS blocked access (camera, photos, storage) | Point the user at Settings |
+| `Failed(message, error, stackTrace)` | Supported, but failed at runtime | Show / report the error |
 
 Consume it with an exhaustive `switch` — the compiler makes you handle every outcome:
 
 ```dart
 switch (await deviceIO.picker.pickImage()) {
-  case PlatformSuccess(:final value):
+  case Success(:final value):
     await upload(await value.readBytes());
-  case PlatformCancelled():
+  case Cancelled():
     break; // nothing to do
-  case PlatformPermissionDenied():
+  case PermissionDenied():
     openAppSettings();
-  case PlatformUnsupported(:final reason):
+  case Unsupported(:final reason):
     hideFeature(reason);
-  case PlatformFailed(:final message):
+  case Failed(:final message):
     showError(message);
 }
 ```
 
-`PlatformPermissionDenied` extends `PlatformFailed`, so a bare `case PlatformFailed()` catches it too. Put the specific arm *before* the generic one when denial deserves its own recovery; drop it and the failure arm handles everything.
+`PermissionDenied` extends `Failed`, so a bare `case Failed()` catches it too. Put the specific arm *before* the generic one when denial deserves its own recovery; drop it and the failure arm handles everything.
 
-The value inside `PlatformSuccess` is never null.
+The value inside `Success` is never null.
 
 There are deliberately no `isSupported` / `valueOrNull` / `when` shortcuts. A sealed result read through an escape hatch stops being exhaustive — and that's the point: the compiler catches the outcome you forgot.
 
@@ -205,7 +205,7 @@ Because two of the five outcomes aren't errors, and exceptions can't say so.
 
 A user who opens the photo picker and taps **Cancel** did nothing wrong. A desktop with **no camera** isn't broken. If those threw, every call site would wrap a `try/catch` and then guess, from the exception type or its message, whether to show an error, stay quiet, or hide a button. A nullable return (`Future<PickedAsset?>`) is no better — `null` can't tell "cancelled" apart from "unsupported."
 
-So the package spends a variant on each real outcome. `PlatformCancelled` and `PlatformUnsupported` are values, not failures; `PlatformFailed` is reserved for the "supported, but it broke" case, with `PlatformPermissionDenied` as a named subtype because its recovery differs (send the user to Settings, don't retry). The result is sealed, so the compiler flags any arm you forgot — you find out at build time, not from a crash report.
+So the package spends a variant on each real outcome. `Cancelled` and `Unsupported` are values, not failures; `Failed` is reserved for the "supported, but it broke" case, with `PermissionDenied` as a named subtype because its recovery differs (send the user to Settings, don't retry). The result is sealed, so the compiler flags any arm you forgot — you find out at build time, not from a crash report.
 
 Throws are kept for one thing only: **programmer error**. Pass an empty list to `shareFiles` and it throws `ArgumentError` synchronously — that's a bug in the call, not a runtime state to branch on.
 
@@ -242,7 +242,7 @@ await picker.pickFiles();
 
 A few notes:
 
-- The multi-picks never surface an empty selection — that's `PlatformCancelled`, so you never branch on `list.isEmpty`.
+- The multi-picks never surface an empty selection — that's `Cancelled`, so you never branch on `list.isEmpty`.
 - `limit` caps how many the user can pick where the platform supports it, and is ignored elsewhere.
 - `ImageOptions` (`maxWidth`, `maxHeight`, `quality`) resizes and recompresses images. A picked video comes back untouched.
 
@@ -252,12 +252,12 @@ Hide the camera button when it isn't there:
 if (picker.isCameraSupported) showCameraButton();
 ```
 
-Camera capture runs on phones and tablets (native apps and mobile browsers). Desktop returns `PlatformUnsupported`.
+Camera capture runs on phones and tablets (native apps and mobile browsers). Desktop returns `Unsupported`.
 
 For `pickMedia`, branch on the result's `mimeType` to tell an image from a video:
 
 ```dart
-if (result case PlatformSuccess(:final value)) {
+if (result case Success(:final value)) {
   final isVideo = value.mimeType.startsWith('video/');
 }
 ```
@@ -348,7 +348,7 @@ final saver = deviceIO.saver;
 
 // silent, no dialog
 final result = await saver.save(bytes: csvBytes, fileName: 'export.csv');
-if (result case PlatformSuccess(value: SavedAtPath(:final path))) {
+if (result case Success(value: SavedAtPath(:final path))) {
   // native: a real path you can reopen. On web it's SavedByBrowser instead —
   // the browser owns the file, there is no path.
 }
@@ -358,9 +358,17 @@ await saver.saveAs(bytes: pdfBytes, fileName: 'report.pdf', dialogTitle: 'Save r
 
 // stream a big file to disk chunk by chunk (constant memory on native)
 await saver.saveStream(byteStream: asset.readStream(), fileName: 'video.mp4');
+
+// save many files into a folder the user picked once (native only)
+final dir = await deviceIO.picker.pickDirectory();
+if (dir case Success(:final value)) {
+  await saver.saveInto(directory: value, bytes: csvBytes, fileName: 'export.csv');
+}
 ```
 
 **Before you rely on `save` on a phone:** it writes to an **app-private** folder there (invisible in the Files app, gone on uninstall). For a save the user can find, use `saveAs` (system dialog, public storage, no permissions).
+
+`pickDirectory` + `saveInto` is the pick-once-save-many flow: one folder dialog, then any number of silent saves into it, each with the same sanitize + no-clobber guarantees as `save`. Both return `Unsupported` on web (browsers expose no directory paths) — `saveAs` per file is the web equivalent.
 
 Full per-platform breakdown in [Where saves land](#where-saves-land).
 
@@ -380,40 +388,45 @@ final opener = deviceIO.opener;
 // works everywhere — native stages a temp file, web opens a blob in a new tab
 await opener.openBytes(bytes: pdfBytes, fileName: 'doc.pdf');
 
-// open a path you already have (native only) — pairs with save
+// open what you just saved — no destructuring, works with any SaveLocation
 final saved = await deviceIO.saver.save(bytes: bytes, fileName: 'report.pdf');
-if (saved case PlatformSuccess(value: SavedAtPath(:final path))) {
-  await opener.openPath(filePath: path);
+if (saved case Success(:final value)) {
+  await opener.open(value);
 }
+
+// or open a raw path you already have (native only)
+await opener.openPath(filePath: '/some/absolute/path/report.pdf');
 ```
 
 `openBytes` is the cross-platform path — reach for it when you have bytes to put on screen.
 
-`openPath` takes an absolute path and returns `PlatformUnsupported` on web, where filesystem paths don't exist. Feed the same bytes to `openBytes` there instead.
+`open(SaveLocation)` closes the save→open loop: a `SavedAtPath` opens at its path; a `SavedByBrowser` download returns `Unsupported` (the browser owns that file — there's no handle to reopen).
+
+`openPath` takes an absolute path and returns `Unsupported` on web, where filesystem paths don't exist. Feed the same bytes to `openBytes` there instead.
 
 ---
 
 ## Error handling
 
-When something breaks you get a `PlatformFailed` carrying three things: a human-readable `message` for a snackbar, plus the original `error` and its `stackTrace` for logging or crash reporting.
+When something breaks you get a `Failed` carrying three things: a human-readable `message` for a snackbar, plus the original `error` and its `stackTrace` for logging or crash reporting.
 
 ```dart
 final result = await deviceIO.saver.saveAs(bytes: bytes, fileName: 'report.pdf');
 switch (result) {
-  case PlatformSuccess(:final value):
+  case Success(:final value):
     showSaved(value);
-  case PlatformCancelled():
+  case Cancelled():
     break; // dismissed the dialog — nothing to report
-  case PlatformPermissionDenied():
+  case PermissionDenied():
     promptForSettings();
-  case PlatformFailed(:final message, :final error, :final stackTrace):
+  case Failed(:final message, :final error, :final stackTrace):
     logger.report(message, error, stackTrace);
 }
 ```
 
 `message` is a diagnostic string, not a localized one — your app translates for its users.
 
-Permission denials arrive as `PlatformPermissionDenied` (a `PlatformFailed` subtype, see [Results](#results)) because the recovery differs: send the user to system settings, don't retry. The package maps each plugin's exact permission code to that variant, so you never string-match error text.
+Permission denials arrive as `PermissionDenied` (a `Failed` subtype, see [Results](#results)) because the recovery differs: send the user to system settings, don't retry. The package maps each plugin's exact permission code to that variant, so you never string-match error text.
 
 ---
 
@@ -428,14 +441,14 @@ One API, six targets. Each capability is backed by a federated plugin (or a web 
 | **Save** | path_provider / SAF dialog | path_provider / Files export | path_provider / native dialog | path_provider / native dialog | path_provider / native dialog | blob download / File System Access |
 | **Open** | open_filex | open_filex | OS open | OS open | OS open | blob in new tab |
 
-Camera capture is available on phones and tablets (native apps and mobile browsers) and returns `PlatformUnsupported` on desktop.
+Camera capture is available on phones and tablets (native apps and mobile browsers) and returns `Unsupported` on desktop.
 
 <details>
 <summary><b>🧩 how does one API stay honest across six platforms?</b></summary>
 
 <br>
 
-Where a platform can't do something, you get a typed `PlatformUnsupported` — never a silent no-op, never a faked success. `openPath` on web returns `Unsupported` because browsers have no filesystem paths; camera capture returns `Unsupported` on desktop. Your app never writes `kIsWeb`, and never gets a fake answer.
+Where a platform can't do something, you get a typed `Unsupported` — never a silent no-op, never a faked success. `openPath` on web returns `Unsupported` because browsers have no filesystem paths; camera capture returns `Unsupported` on desktop. Your app never writes `kIsWeb`, and never gets a fake answer.
 
 How the six-platform guarantee holds under the hood is in [Architecture](docs/ARCHITECTURE.md).
 
@@ -454,15 +467,17 @@ The two save doors resolve differently per platform:
 
 On web, the Chromium save dialog comes from the File System Access API, writing straight to the file the user chose. Firefox and Safari fall back to a plain browser download.
 
+`saveInto` writes to whatever directory you hand it — typically one from `pickDirectory` — so it lands wherever the user chose. Both are native-only (`Unsupported` on web).
+
 ### Browser support
 
 There's no minimum-version table, because the web layer **feature-detects at runtime and degrades gracefully** instead of gating on a version:
 
 - **File System Access** (the `saveAs` dialog, lazy file-pick reads) is Chromium-only. Where it's absent (Firefox, Safari), `saveAs` becomes a plain download and a *multi*-file pick buffers up front (single picks still read lazily).
-- **Web Share** availability varies by browser and by whether the page is served over HTTPS. A dismissed sheet comes back as `PlatformCancelled`.
-- **Camera capture** works in mobile browsers (the file input's `capture` attribute); desktop browsers report `PlatformUnsupported`.
+- **Web Share** availability varies by browser and by whether the page is served over HTTPS. A dismissed sheet comes back as `Cancelled`.
+- **Camera capture** works in mobile browsers (the file input's `capture` attribute); desktop browsers report `Unsupported`.
 
-You never check any of this. The package picks the best path and hands you the same `PlatformResult` regardless.
+You never check any of this. The package picks the best path and hands you the same `Outcome` regardless.
 
 ---
 
@@ -471,9 +486,12 @@ You never check any of this. The package picks the best path and hands you the s
 What the shipped package doesn't do, and what to reach for meanwhile. For the full per-capability status, see the [capability roadmap](docs/CAPABILITY_ROADMAP.md).
 
 - **Silent saves to *public* storage on mobile.** `save` on a phone writes to app-private storage (see [Save](#save)). Landing in public Downloads silently needs first-party MediaStore code, which this package skips ([roadmap](docs/CAPABILITY_ROADMAP.md) has the reasoning). `saveAs` is the answer: public storage, system dialog, no permissions. Need background exports? [Open an issue](https://github.com/whuppi/device_io/issues).
-- **Requesting permissions.** This package *surfaces* denials as `PlatformPermissionDenied`; it doesn't pop the permission prompt or manage the flow. Apps own their permission UX and their Info.plist / manifest entries. For an explicit request-and-check flow, use [`permission_handler`](https://pub.dev/packages/permission_handler).
+- **Requesting permissions.** This package *surfaces* denials as `PermissionDenied`; it doesn't pop the permission prompt or manage the flow. Apps own their permission UX and their Info.plist / manifest entries. For an explicit request-and-check flow, use [`permission_handler`](https://pub.dev/packages/permission_handler).
 - **A viewer widget.** `openBytes` and `openPath` open content in the OS default app — they don't draw it inside your UI. To render a PDF or image on screen, pair this with a viewer ([`pdfx`](https://pub.dev/packages/pdfx) for PDFs, a gallery widget for images): pick and save here, display there.
-- **`openPath` on web.** Filesystem paths don't exist in the browser, so `openPath` returns `PlatformUnsupported` there. `openBytes` is the web path — hand it the bytes and it opens a blob in a new tab.
+- **`openPath` on web.** Filesystem paths don't exist in the browser, so `openPath` returns `Unsupported` there. `openBytes` is the web path — hand it the bytes and it opens a blob in a new tab.
+- **Drag-and-drop.** A drop target is a widget — a UI concern this package deliberately stays out of. Use [`desktop_drop`](https://pub.dev/packages/desktop_drop) for the drop surface; the dropped bytes flow straight into `share` / `save` / `openBytes` here.
+- **Progress callbacks.** None of the wrapped plugins expose byte-level progress hooks. If you need one for a big save, count chunks in your own stream before handing it to `saveStream` — the stream seam makes that a five-line wrapper on the caller's side.
+- **Opening URLs.** `open*` is for files/bytes, not links. [`url_launcher`](https://pub.dev/packages/url_launcher) owns URI opening; wrapping it here would add a dependency without adding a guarantee.
 
 ---
 

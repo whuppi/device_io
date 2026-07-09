@@ -1,6 +1,6 @@
 // CHARTER — this file alone proves, through ONE shared spec, that every
 // adapter whose corners are injectable at a pure platform-interface seam
-// speaks the PlatformResult grammar (see result_grammar_battery.dart for
+// speaks the Outcome grammar (see result_grammar_battery.dart for
 // the variant law). It is also the fleet-visible corner TABLE:
 //
 //   adapter          success  cancel  deny  failure  unsupported
@@ -39,7 +39,7 @@ void main() {
   final fakePicker = FakeImagePickerPlatform();
   final picker = PluginAssetPicker();
 
-  Future<PlatformResult<Object?>> pick() => picker.pickImage();
+  Future<Outcome<Object?>> pick() => picker.pickImage();
 
   runResultGrammarSuiteRef(
     'PluginAssetPicker.pickImage',
@@ -78,8 +78,7 @@ void main() {
   final fakeShare = FakeSharePlatform();
   final sharer = NativeSharer();
 
-  Future<PlatformResult<Object?>> share() =>
-      sharer.shareText(text: 'grammar probe');
+  Future<Outcome<Object?>> share() => sharer.shareText(text: 'grammar probe');
 
   runResultGrammarSuiteRef(
     'NativeSharer.shareText',
@@ -104,11 +103,11 @@ void main() {
 void runResultGrammarSuiteRef(
   String adapter, {
   void Function()? setUpCorner,
-  Future<PlatformResult<Object?>> Function()? success,
-  Future<PlatformResult<Object?>> Function()? cancel,
-  Future<PlatformResult<Object?>> Function()? deny,
-  Future<PlatformResult<Object?>> Function()? failure,
-  Future<PlatformResult<Object?>> Function()? unsupported,
+  Future<Outcome<Object?>> Function()? success,
+  Future<Outcome<Object?>> Function()? cancel,
+  Future<Outcome<Object?>> Function()? deny,
+  Future<Outcome<Object?>> Function()? failure,
+  Future<Outcome<Object?>> Function()? unsupported,
 }) {
   runResultGrammarSuite(
     adapter,

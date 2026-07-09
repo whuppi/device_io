@@ -29,7 +29,7 @@ Platform entitlements consumers must declare (verified via the example's
 macOS integration smoke): silent `save` into `~/Downloads` needs
 `com.apple.security.files.downloads.read-write`; `saveAs` and picking need
 `com.apple.security.files.user-selected.read-write`. Without the Downloads
-entitlement a sandboxed macOS app gets `PlatformFailed` from `save`
+entitlement a sandboxed macOS app gets `Failed` from `save`
 — the package surfaces it correctly, but the README's Install section is
 the fix. iOS needs the three usage-description keys.
 
@@ -50,7 +50,7 @@ the fix. iOS needs the three usage-description keys.
 1. Add it to the contract (`<concern>/<contract>.dart`) with the
    platform-behavior doc and, when the shape is new, a ```dart example.
 2. Implement in BOTH `native/` and `web/` impls (or in the single picker
-   impl). A platform that genuinely can't → `PlatformUnsupported` with
+   impl). A platform that genuinely can't → `Unsupported` with
    the evidence verified first (plugin source / platform spec), never
    assumed.
 3. Follow the error physics: catch `(e, st)`, rethrow `Error`s, capture

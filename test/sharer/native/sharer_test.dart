@@ -39,7 +39,7 @@ import 'package:share_plus_platform_interface/share_plus_platform_interface.dart
 import 'package:device_io/src/sharer/native/sharer.dart';
 import 'package:device_io/src/sharer/share_file.dart';
 import 'package:device_io/src/sharer/share_origin.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 import '../../harness/bytes.dart';
 import '../../harness/fake_path_provider.dart';
@@ -78,7 +78,7 @@ void main() {
         sharePositionOrigin: origin,
       );
 
-      expect(result, isA<PlatformSuccess<void>>());
+      expect(result, isA<Success<void>>());
       expect(share.callCount, 1);
       final params = share.lastParams!;
       expect(params.text, 'hello world');
@@ -100,7 +100,7 @@ void main() {
           mimeType: 'text/plain',
         );
 
-        expect(result, isA<PlatformSuccess<void>>());
+        expect(result, isA<Success<void>>());
         final xfile = share.lastParams!.files!.single;
         expect(_basename(xfile.path), 'note.txt');
         expect(File(xfile.path).existsSync(), isTrue);
@@ -133,7 +133,7 @@ void main() {
         fileName: 'a.txt',
       );
 
-      expect(result, isA<PlatformCancelled<void>>());
+      expect(result, isA<Cancelled<void>>());
     }, timeout: t(3));
 
     test('unavailable ShareResult -> Success(null)', () async {
@@ -144,7 +144,7 @@ void main() {
         fileName: 'a.txt',
       );
 
-      expect(result, isA<PlatformSuccess<void>>());
+      expect(result, isA<Success<void>>());
     }, timeout: t(3));
   });
 
@@ -158,7 +158,7 @@ void main() {
         fileName: 'stream.bin',
       );
 
-      expect(result, isA<PlatformSuccess<void>>());
+      expect(result, isA<Success<void>>());
       final xfile = share.lastParams!.files!.single;
       final onDisk = Uint8List.fromList(File(xfile.path).readAsBytesSync());
       expect(onDisk.length, full.length);
@@ -183,7 +183,7 @@ void main() {
         sharePositionOrigin: origin,
       );
 
-      expect(result, isA<PlatformSuccess<void>>());
+      expect(result, isA<Success<void>>());
       final files = share.lastParams!.files!;
       expect(files.length, 3);
 
@@ -231,8 +231,8 @@ void main() {
 
       final result = await adapter.shareText(text: 'hi');
 
-      expect(result, isA<PlatformFailed<void>>());
-      expect((result as PlatformFailed<void>).stackTrace, isNotNull);
+      expect(result, isA<Failed<void>>());
+      expect((result as Failed<void>).stackTrace, isNotNull);
     }, timeout: t(3));
 
     test('caught Error is rethrown', () async {

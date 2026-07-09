@@ -51,7 +51,7 @@ The maintainer handles releases.
 
 - Match existing code in the repo.
 - **Expected failures are values, never throws.** Every adapter method
-  returns `PlatformResult` — `Supported` / `Cancelled` / `Unsupported` /
+  returns `Outcome` — `Supported` / `Cancelled` / `Unsupported` /
   `Failed` (+ `PermissionDenied`). Catches capture the stack trace into
   the result and rethrow `Error`s so programmer bugs crash loudly.
 - **The stub-default conditional import in `lib/src/runtime/` is
@@ -66,7 +66,7 @@ The maintainer handles releases.
   `make platforms` fails if this regresses.
 - **No `dart:io` outside `lib/src/runtime/{native,web}/` and the `native/` adapter
   folders.** Shared interfaces and types stay platform-neutral.
-- **Every impossibility claim needs evidence.** A `PlatformUnsupported`
+- **Every impossibility claim needs evidence.** A `Unsupported`
   return must be backed by verified platform/plugin behavior, not
   convenience — check the claim against the plugin sources before
   writing it.

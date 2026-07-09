@@ -9,7 +9,7 @@ import 'package:device_io/src/picker/image_options.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/picker/web_file_pick.dart';
 import 'package:device_io/src/types/mime_types.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Asset picker over image_picker + file_picker — every platform.
 //
@@ -45,14 +45,14 @@ final class PluginAssetPicker implements AssetPicker {
   // ── Images — gallery + camera ──
 
   @override
-  Future<PlatformResult<PickedAsset>> pickImage({
+  Future<Outcome<PickedAsset>> pickImage({
     ImageOptions options = const ImageOptions(),
   }) async {
     return _pickFromSource(ImageSource.gallery, options: options);
   }
 
   @override
-  Future<PlatformResult<List<PickedAsset>>> pickImages({
+  Future<Outcome<List<PickedAsset>>> pickImages({
     ImageOptions options = const ImageOptions(),
     int? limit,
   }) async {
@@ -65,23 +65,23 @@ final class PluginAssetPicker implements AssetPicker {
       );
 
       if (xFiles.isEmpty) {
-        return const PlatformCancelled();
+        return const Cancelled();
       }
-      return PlatformSuccess(xFiles.map(_fromXFile).toList());
+      return Success(xFiles.map(_fromXFile).toList());
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick images');
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
-      return PlatformFailed('Failed to pick images', error: e, stackTrace: st);
+      return Failed('Failed to pick images', error: e, stackTrace: st);
     }
   }
 
   @override
-  Future<PlatformResult<PickedAsset>> captureImage({
+  Future<Outcome<PickedAsset>> captureImage({
     ImageOptions options = const ImageOptions(),
   }) async {
     if (!isCameraSupported) {
-      return const PlatformUnsupported(
+      return const Unsupported(
         'Camera capture is not available on this platform '
         '(desktop has no camera integration)',
       );
@@ -92,16 +92,14 @@ final class PluginAssetPicker implements AssetPicker {
   // ── Video + mixed media ──
 
   @override
-  Future<PlatformResult<PickedAsset>> pickVideo({Duration? maxDuration}) async {
+  Future<Outcome<PickedAsset>> pickVideo({Duration? maxDuration}) async {
     return _pickVideoFromSource(ImageSource.gallery, maxDuration: maxDuration);
   }
 
   @override
-  Future<PlatformResult<PickedAsset>> captureVideo({
-    Duration? maxDuration,
-  }) async {
+  Future<Outcome<PickedAsset>> captureVideo({Duration? maxDuration}) async {
     if (!isCameraSupported) {
-      return const PlatformUnsupported(
+      return const Unsupported(
         'Camera capture is not available on this platform '
         '(desktop has no camera integration)',
       );
@@ -110,7 +108,7 @@ final class PluginAssetPicker implements AssetPicker {
   }
 
   @override
-  Future<PlatformResult<PickedAsset>> pickMedia({
+  Future<Outcome<PickedAsset>> pickMedia({
     ImageOptions options = const ImageOptions(),
   }) async {
     try {
@@ -121,19 +119,19 @@ final class PluginAssetPicker implements AssetPicker {
       );
 
       if (xFile == null) {
-        return const PlatformCancelled();
+        return const Cancelled();
       }
-      return PlatformSuccess(_fromXFile(xFile));
+      return Success(_fromXFile(xFile));
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick media');
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed('Failed to pick media', error: e, stackTrace: st);
+      return Failed('Failed to pick media', error: e, stackTrace: st);
     }
   }
 
   @override
-  Future<PlatformResult<List<PickedAsset>>> pickMultipleMedia({
+  Future<Outcome<List<PickedAsset>>> pickMultipleMedia({
     ImageOptions options = const ImageOptions(),
     int? limit,
   }) async {
@@ -146,21 +144,21 @@ final class PluginAssetPicker implements AssetPicker {
       );
 
       if (xFiles.isEmpty) {
-        return const PlatformCancelled();
+        return const Cancelled();
       }
-      return PlatformSuccess(xFiles.map(_fromXFile).toList());
+      return Success(xFiles.map(_fromXFile).toList());
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick media');
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed('Failed to pick media', error: e, stackTrace: st);
+      return Failed('Failed to pick media', error: e, stackTrace: st);
     }
   }
 
   // ── Generic files ──
 
   @override
-  Future<PlatformResult<PickedAsset>> pickFile({
+  Future<Outcome<PickedAsset>> pickFile({
     List<String>? allowedExtensions,
   }) async {
     final result = await _pickPlatformFiles(
@@ -168,29 +166,28 @@ final class PluginAssetPicker implements AssetPicker {
       allowMultiple: false,
     );
     // The single-file counterpart to pickFiles: take the first asset.
-    // (PlatformResult.map was removed — a sealed result is consumed by
+    // (Outcome.map was removed — a sealed result is consumed by
     // exhaustive switch, with the permission-denied arm before failed.)
     return switch (result) {
-      PlatformSuccess(:final value) => PlatformSuccess(value.first),
-      PlatformCancelled() => const PlatformCancelled(),
-      PlatformUnsupported(:final reason) => PlatformUnsupported(reason),
-      PlatformPermissionDenied(
-        :final message,
-        :final error,
-        :final stackTrace,
-      ) =>
-        PlatformPermissionDenied(
+      Success(:final value) => Success(value.first),
+      Cancelled() => const Cancelled(),
+      Unsupported(:final reason) => Unsupported(reason),
+      PermissionDenied(:final message, :final error, :final stackTrace) =>
+        PermissionDenied(
           message: message,
           error: error,
           stackTrace: stackTrace,
         ),
-      PlatformFailed(:final message, :final error, :final stackTrace) =>
-        PlatformFailed(message, error: error, stackTrace: stackTrace),
+      Failed(:final message, :final error, :final stackTrace) => Failed(
+        message,
+        error: error,
+        stackTrace: stackTrace,
+      ),
     };
   }
 
   @override
-  Future<PlatformResult<List<PickedAsset>>> pickFiles({
+  Future<Outcome<List<PickedAsset>>> pickFiles({
     List<String>? allowedExtensions,
   }) {
     return _pickPlatformFiles(
@@ -201,7 +198,7 @@ final class PluginAssetPicker implements AssetPicker {
 
   // ── Internals ──
 
-  Future<PlatformResult<List<PickedAsset>>> _pickPlatformFiles({
+  Future<Outcome<List<PickedAsset>>> _pickPlatformFiles({
     required List<String>? allowedExtensions,
     required bool allowMultiple,
   }) async {
@@ -228,7 +225,7 @@ final class PluginAssetPicker implements AssetPicker {
           allowedExtensions: allowedExtensions,
         );
         if (result == null || result.files.isEmpty) {
-          return const PlatformCancelled();
+          return const Cancelled();
         }
         files = result.files;
       } else {
@@ -237,7 +234,7 @@ final class PluginAssetPicker implements AssetPicker {
           allowedExtensions: allowedExtensions,
         );
         if (file == null) {
-          return const PlatformCancelled();
+          return const Cancelled();
         }
         files = [file];
       }
@@ -248,20 +245,20 @@ final class PluginAssetPicker implements AssetPicker {
         if (asset == null) {
           // Rare plugin edge case (a path-less Android content provider).
           // Fail the whole pick rather than silently dropping a selection.
-          return const PlatformFailed('Picked file has no accessible data');
+          return const Failed('Picked file has no accessible data');
         }
         assets.add(asset);
       }
-      return PlatformSuccess(assets);
+      return Success(assets);
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick files');
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed('Failed to pick files', error: e, stackTrace: st);
+      return Failed('Failed to pick files', error: e, stackTrace: st);
     }
   }
 
-  Future<PlatformResult<PickedAsset>> _pickFromSource(
+  Future<Outcome<PickedAsset>> _pickFromSource(
     ImageSource source, {
     required ImageOptions options,
   }) async {
@@ -274,18 +271,18 @@ final class PluginAssetPicker implements AssetPicker {
       );
 
       if (xFile == null) {
-        return const PlatformCancelled();
+        return const Cancelled();
       }
-      return PlatformSuccess(_fromXFile(xFile));
+      return Success(_fromXFile(xFile));
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick image');
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed('Failed to pick image', error: e, stackTrace: st);
+      return Failed('Failed to pick image', error: e, stackTrace: st);
     }
   }
 
-  Future<PlatformResult<PickedAsset>> _pickVideoFromSource(
+  Future<Outcome<PickedAsset>> _pickVideoFromSource(
     ImageSource source, {
     Duration? maxDuration,
   }) async {
@@ -296,14 +293,14 @@ final class PluginAssetPicker implements AssetPicker {
       );
 
       if (xFile == null) {
-        return const PlatformCancelled();
+        return const Cancelled();
       }
-      return PlatformSuccess(_fromXFile(xFile));
+      return Success(_fromXFile(xFile));
     } on PlatformException catch (e, st) {
       return _failure(e, st, 'Failed to pick video');
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed('Failed to pick video', error: e, stackTrace: st);
+      return Failed('Failed to pick video', error: e, stackTrace: st);
     }
   }
 
@@ -343,18 +340,36 @@ final class PluginAssetPicker implements AssetPicker {
     'photo_access_restricted',
   };
 
-  PlatformResult<T> _failure<T>(
-    PlatformException e,
-    StackTrace st,
-    String message,
-  ) {
+  Outcome<T> _failure<T>(PlatformException e, StackTrace st, String message) {
     if (_permissionCodes.contains(e.code)) {
-      return PlatformPermissionDenied<T>(
+      return PermissionDenied<T>(
         message: e.message ?? 'Permission denied',
         error: e,
         stackTrace: st,
       );
     }
-    return PlatformFailed(message, error: e, stackTrace: st);
+    return Failed(message, error: e, stackTrace: st);
+  }
+
+  @override
+  Future<Outcome<String>> pickDirectory({String? dialogTitle}) async {
+    // file_picker's getDirectoryPath is native-only; the browser exposes no
+    // directory path, so there is nothing to return on web. Note: file_picker
+    // swallows a PlatformException (e.g. a protected/permission-denied dir) to
+    // null internally, so such an error surfaces here as Cancelled, not Failed
+    // — a plugin limitation, not a lost result.
+    if (kIsWeb) {
+      return const Unsupported('Directory picking is not available on web');
+    }
+    try {
+      final path = await FilePicker.getDirectoryPath(dialogTitle: dialogTitle);
+      if (path == null) return const Cancelled();
+      return Success(path);
+    } on PlatformException catch (e, st) {
+      return _failure(e, st, 'Failed to pick a directory');
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return Failed('Failed to pick a directory', error: e, stackTrace: st);
+    }
   }
 }

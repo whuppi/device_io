@@ -63,7 +63,7 @@ void main() {
     tester,
   ) async {
     await pumpToOpenTab(tester);
-    opener.result = const PlatformFailed('no app for text/plain');
+    opener.result = const Failed('no app for text/plain');
 
     await tester.tap(find.text('openBytes'));
     await settle(tester);
@@ -91,5 +91,28 @@ void main() {
 
     expect(opener.lastPath, '/inmem/save/people.csv');
     expect(find.textContaining('Open last saved → ok'), findsOneWidget);
+  });
+
+  testWidgets('open-last-location routes the saved SaveLocation into open()', (
+    tester,
+  ) async {
+    await tester.pumpWidget(DeviceIOExampleApp(deviceIO: deviceIO));
+    await settle(tester);
+    await tester.tap(find.text('Save'));
+    await settle(tester);
+    await tester.tap(find.text('save (CSV)'));
+    await settle(tester);
+
+    await tester.tap(find.text('Open'));
+    await settle(tester);
+    await tester.tap(find.text('open (last location)'));
+    await settle(tester);
+
+    expect(opener.lastLocation, isA<SavedAtPath>());
+    expect(
+      (opener.lastLocation! as SavedAtPath).path,
+      '/inmem/save/people.csv',
+    );
+    expect(find.textContaining('Open saved location → ok'), findsOneWidget);
   });
 }

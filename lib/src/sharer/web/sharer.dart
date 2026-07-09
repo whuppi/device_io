@@ -9,35 +9,33 @@ import 'package:device_io/src/sharer/share_file.dart';
 import 'package:device_io/src/sharer/share_origin.dart';
 import 'package:device_io/src/sharer/sharer.dart';
 import 'package:device_io/src/types/mime_types.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Web sharing via the Web Share API.
 ///
-/// Returns [PlatformUnsupported] when the browser doesn't support sharing,
-/// [PlatformCancelled] when the user dismisses the share dialog.
+/// Returns [Unsupported] when the browser doesn't support sharing,
+/// [Cancelled] when the user dismisses the share dialog.
 final class WebSharer implements Sharer {
   // sharePositionOrigin is the iPadOS popover anchor — the web share
   // dialog has no popover to anchor, so every method accepts it and
   // ignores it.
 
   @override
-  Future<PlatformResult<void>> shareText({
+  Future<Outcome<void>> shareText({
     required String text,
     String? subject,
     ShareOrigin? sharePositionOrigin,
   }) async {
     // Feature-detect instead of calling and string-matching the TypeError.
     if (!_shareSupported) {
-      return const PlatformUnsupported(
-        'Sharing is not supported in this browser',
-      );
+      return const Unsupported('Sharing is not supported in this browser');
     }
     try {
       final data = web.ShareData(text: text);
       if (subject != null) data.title = subject;
 
       await web.window.navigator.share(data).toDart;
-      return const PlatformSuccess(null);
+      return const Success(null);
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
       return _mapShareError(e, st, 'Failed to share text');
@@ -45,7 +43,7 @@ final class WebSharer implements Sharer {
   }
 
   @override
-  Future<PlatformResult<void>> shareFile({
+  Future<Outcome<void>> shareFile({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -54,9 +52,7 @@ final class WebSharer implements Sharer {
     ShareOrigin? sharePositionOrigin,
   }) async {
     if (!_shareSupported) {
-      return const PlatformUnsupported(
-        'Sharing is not supported in this browser',
-      );
+      return const Unsupported('Sharing is not supported in this browser');
     }
     try {
       final file = _toWebFile(bytes, fileName, mimeType);
@@ -68,13 +64,13 @@ final class WebSharer implements Sharer {
       // canShare validates the payload (file sharing arrived later than
       // text sharing — Safari and Firefox gained it separately).
       if (!web.window.navigator.canShare(data)) {
-        return const PlatformUnsupported(
+        return const Unsupported(
           'File sharing is not supported in this browser',
         );
       }
 
       await web.window.navigator.share(data).toDart;
-      return const PlatformSuccess(null);
+      return const Success(null);
     } catch (e, st) {
       if (e is Error) rethrow;
       return _mapShareError(e, st, 'Failed to share "$fileName"');
@@ -82,7 +78,7 @@ final class WebSharer implements Sharer {
   }
 
   @override
-  Future<PlatformResult<void>> shareFiles({
+  Future<Outcome<void>> shareFiles({
     required List<ShareFile> files,
     String? subject,
     String? text,
@@ -92,9 +88,7 @@ final class WebSharer implements Sharer {
       throw ArgumentError.value(files, 'files', 'must not be empty');
     }
     if (!_shareSupported) {
-      return const PlatformUnsupported(
-        'Sharing is not supported in this browser',
-      );
+      return const Unsupported('Sharing is not supported in this browser');
     }
     try {
       final webFiles = [
@@ -108,13 +102,13 @@ final class WebSharer implements Sharer {
       // canShare validates the payload (file sharing arrived later than
       // text sharing — Safari and Firefox gained it separately).
       if (!web.window.navigator.canShare(data)) {
-        return const PlatformUnsupported(
+        return const Unsupported(
           'File sharing is not supported in this browser',
         );
       }
 
       await web.window.navigator.share(data).toDart;
-      return const PlatformSuccess(null);
+      return const Success(null);
     } catch (e, st) {
       if (e is Error) rethrow;
       return _mapShareError(e, st, 'Failed to share ${files.length} files');
@@ -122,7 +116,7 @@ final class WebSharer implements Sharer {
   }
 
   @override
-  Future<PlatformResult<void>> shareFileStream({
+  Future<Outcome<void>> shareFileStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -139,11 +133,7 @@ final class WebSharer implements Sharer {
       }
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed(
-        'Failed to read the byte stream',
-        error: e,
-        stackTrace: st,
-      );
+      return Failed('Failed to read the byte stream', error: e, stackTrace: st);
     }
     return shareFile(
       bytes: builder.takeBytes(),
@@ -165,17 +155,17 @@ final class WebSharer implements Sharer {
   bool get _shareSupported =>
       web.window.navigator.hasProperty('share'.toJS).toDart;
 
-  PlatformResult<void> _mapShareError(Object e, StackTrace st, String message) {
+  Outcome<void> _mapShareError(Object e, StackTrace st, String message) {
     final name = domExceptionName(e, const [
       'AbortError',
       'NotAllowedError',
       'NotSupportedError',
     ]);
     if (name == 'AbortError') {
-      return const PlatformCancelled();
+      return const Cancelled();
     }
     if (name == 'NotAllowedError') {
-      return PlatformPermissionDenied(
+      return PermissionDenied(
         message:
             'The browser blocked sharing (needs a user gesture or '
             'permission)',
@@ -184,10 +174,8 @@ final class WebSharer implements Sharer {
       );
     }
     if (name == 'NotSupportedError') {
-      return const PlatformUnsupported(
-        'Sharing is not supported in this browser',
-      );
+      return const Unsupported('Sharing is not supported in this browser');
     }
-    return PlatformFailed(message, error: e, stackTrace: st);
+    return Failed(message, error: e, stackTrace: st);
   }
 }

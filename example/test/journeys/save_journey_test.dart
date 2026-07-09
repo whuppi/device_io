@@ -14,6 +14,7 @@ import 'package:device_io/device_io.dart';
 import 'package:device_io_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart' show FilledButton;
+import 'package:flutter/services.dart' show MethodChannel;
 
 import '../harness/device_profiles.dart' show settle;
 import '../harness/fakes.dart';
@@ -73,11 +74,64 @@ void main() {
 
   testWidgets('a cancelled saveAs dialog logs cancelled', (tester) async {
     await pumpToSaveTab(tester);
-    saver.result = const PlatformCancelled();
+    saver.result = const Cancelled();
 
     await tester.tap(find.text('saveAs'));
     await settle(tester);
 
     expect(find.textContaining('Save as… → cancelled'), findsOneWidget);
   });
+
+  testWidgets(
+    'saveInto is disabled until a folder is picked, then hands the saver that '
+    'directory',
+    (tester) async {
+      // A directory pick returns a scripted path; the journey drives the real
+      // adapter against file_picker's `dir` channel via a mock.
+      const dirChannel = MethodChannel(
+        'miguelruivo.flutter.plugins.filepicker',
+      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(dirChannel, (call) async {
+            if (call.method == 'dir') return '/chosen/export/dir';
+            return null;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(dirChannel, null),
+      );
+
+      await tester.pumpWidget(DeviceIOExampleApp(deviceIO: deviceIO));
+      await settle(tester);
+
+      // Before picking, saveInto is disabled.
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      final before = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text('saveInto (picked folder)'),
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(before.onPressed, isNull);
+
+      // Pick a folder on the Pick tab.
+      await tester.tap(find.text('Pick'));
+      await settle(tester);
+      await tester.tap(find.text('pickDirectory'));
+      await settle(tester);
+      expect(
+        find.textContaining('Pick directory → /chosen/export/dir'),
+        findsOneWidget,
+      );
+
+      // saveInto now arms and hands the saver the chosen directory.
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      await tester.tap(find.text('saveInto (picked folder)'));
+      await settle(tester);
+      expect(saver.lastDirectory, '/chosen/export/dir');
+      expect(saver.lastFileName, 'into.csv');
+    },
+  );
 }

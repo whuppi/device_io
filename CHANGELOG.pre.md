@@ -60,6 +60,23 @@ CONTENT RULES (never change)
 
 <!-- Add new versions below, newest first. -->
 
+## 2.0.0-dev.0
+
+- **Breaking:** the result family is renamed — `PlatformResult` → `Outcome`,
+  `PlatformSuccess` → `Success`, `PlatformCancelled` → `Cancelled`,
+  `PlatformUnsupported` → `Unsupported`, `PlatformFailure` → `Failed`,
+  `PlatformPermissionDenied` → `PermissionDenied`. Migration is a mechanical
+  find-and-replace of those six names; fields, semantics, and the sealed
+  hierarchy (PermissionDenied still subtypes Failed) are unchanged.
+- Added `AssetPicker.pickDirectory` — a directory chooser on the five native
+  platforms; `Unsupported` on web.
+- Added `FileSaver.saveInto` — silent save into a caller-chosen directory
+  (pairs with `pickDirectory` for pick-once-save-many), with the same
+  name-sanitizing and no-clobber guarantees as `save`; `Unsupported` on web.
+- Added `FileOpener.open(SaveLocation)` — opens what a save returned without
+  destructuring: `SavedAtPath` opens at its path, `SavedByBrowser` returns
+  `Unsupported`.
+
 ## 1.0.0-dev.0
 
 First prerelease — cross-platform device IO for Flutter: pick, share,

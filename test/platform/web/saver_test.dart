@@ -22,7 +22,7 @@ import 'dart:js_interop_unsafe';
 
 import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/saver/web/file_saver.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
 
@@ -72,11 +72,8 @@ void main() {
         fileName: 'note.bin',
         mimeType: 'application/x-custom',
       );
-      expect(result, isA<PlatformSuccess<SaveLocation>>());
-      expect(
-        (result as PlatformSuccess<SaveLocation>).value,
-        isA<SavedByBrowser>(),
-      );
+      expect(result, isA<Success<SaveLocation>>());
+      expect((result as Success<SaveLocation>).value, isA<SavedByBrowser>());
       expect(createObjectUrlCalls, 1);
       expect(lastBlob!.type, 'application/x-custom');
     },
@@ -89,7 +86,7 @@ void main() {
       bytes: utf8SampleBytes,
       fileName: 'photo.png',
     );
-    expect(result, isA<PlatformSuccess<SaveLocation>>());
+    expect(result, isA<Success<SaveLocation>>());
     expect(createObjectUrlCalls, 1);
     expect(lastBlob!.type, 'image/png');
   }, timeout: t(4));
@@ -152,10 +149,9 @@ void main() {
       expect(written, isNotNull);
       expect(written!.toDart, orderedEquals(payload));
       expect(closed, isTrue);
-      expect(result, isA<PlatformSuccess<SaveLocation>>());
+      expect(result, isA<Success<SaveLocation>>());
       expect(
-        ((result as PlatformSuccess<SaveLocation>).value as SavedByBrowser)
-            .fileName,
+        ((result as Success<SaveLocation>).value as SavedByBrowser).fileName,
         'saved-as.bin',
       );
       // The dialog path succeeded — no download fallback.
@@ -187,7 +183,7 @@ void main() {
         fileName: 'report.bin',
       );
 
-      expect(result, isA<PlatformCancelled<SaveLocation>>());
+      expect(result, isA<Cancelled<SaveLocation>>());
       expect(createObjectUrlCalls, 0); // fallback must NOT have run
     },
     timeout: t(5),
@@ -214,11 +210,8 @@ void main() {
         fileName: 'report.png',
       );
 
-      expect(result, isA<PlatformSuccess<SaveLocation>>());
-      expect(
-        (result as PlatformSuccess<SaveLocation>).value,
-        isA<SavedByBrowser>(),
-      );
+      expect(result, isA<Success<SaveLocation>>());
+      expect((result as Success<SaveLocation>).value, isA<SavedByBrowser>());
       expect(createObjectUrlCalls, 1); // fallback DID run
       expect(lastBlob!.type, 'image/png');
     },
@@ -236,7 +229,7 @@ void main() {
       fileName: 'doc.pdf',
     );
 
-    expect(result, isA<PlatformSuccess<SaveLocation>>());
+    expect(result, isA<Success<SaveLocation>>());
     expect(createObjectUrlCalls, 1);
     expect(lastBlob!.type, 'application/pdf');
   }, timeout: t(4));
@@ -264,7 +257,7 @@ void main() {
         fileName: 'video.mp4',
       );
 
-      expect(result, isA<PlatformSuccess<SaveLocation>>());
+      expect(result, isA<Success<SaveLocation>>());
       expect(createObjectUrlCalls, 1); // exactly one blob
       expect(lastBlob!.size, total);
       expect(lastBlob!.type, 'video/mp4');

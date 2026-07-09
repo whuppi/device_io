@@ -9,7 +9,7 @@ import 'package:device_io/src/runtime/web/dom_exception.dart';
 import 'package:device_io/src/saver/file_saver.dart';
 import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/types/mime_types.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 // window.showSaveFilePicker — the File System Access save dialog.
 // package:web only generates STABLE specs and this is still a WICG draft,
@@ -31,26 +31,22 @@ extension type _SaveFilePickerOptions._(JSObject _) implements JSObject {
 /// (File System Access API on Chromium), falling back to a download.
 final class WebFileSaver implements FileSaver {
   @override
-  Future<PlatformResult<SaveLocation>> save({
+  Future<Outcome<SaveLocation>> save({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
   }) async {
     try {
       _triggerDownload(bytes, fileName, mimeType);
-      return const PlatformSuccess(SavedByBrowser());
+      return const Success(SavedByBrowser());
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
-      return PlatformFailed(
-        'Failed to trigger download',
-        error: e,
-        stackTrace: st,
-      );
+      return Failed('Failed to trigger download', error: e, stackTrace: st);
     }
   }
 
   @override
-  Future<PlatformResult<SaveLocation>> saveStream({
+  Future<Outcome<SaveLocation>> saveStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -65,19 +61,15 @@ final class WebFileSaver implements FileSaver {
         builder.add(chunk);
       }
       _triggerDownload(builder.takeBytes(), fileName, mimeType);
-      return const PlatformSuccess(SavedByBrowser());
+      return const Success(SavedByBrowser());
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed(
-        'Failed to trigger download',
-        error: e,
-        stackTrace: st,
-      );
+      return Failed('Failed to trigger download', error: e, stackTrace: st);
     }
   }
 
   @override
-  Future<PlatformResult<SaveLocation>> saveAs({
+  Future<Outcome<SaveLocation>> saveAs({
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
@@ -96,11 +88,11 @@ final class WebFileSaver implements FileSaver {
       final writable = await handle.createWritable().toDart;
       await writable.write(bytes.toJS).toDart;
       await writable.close().toDart;
-      return PlatformSuccess(SavedByBrowser(fileName: handle.name));
+      return Success(SavedByBrowser(fileName: handle.name));
     } catch (e, st) {
       if (e is Error) rethrow;
       if (domExceptionName(e, const ['AbortError']) != null) {
-        return const PlatformCancelled();
+        return const Cancelled();
       }
       // SecurityError (called outside a user gesture) and other dialog
       // failures: the save should still succeed — fall back to a download.
@@ -110,12 +102,8 @@ final class WebFileSaver implements FileSaver {
         mimeType: mimeType,
       );
       return switch (fallback) {
-        PlatformSuccess() => fallback,
-        _ => PlatformFailed(
-          'Failed to save "$fileName"',
-          error: e,
-          stackTrace: st,
-        ),
+        Success() => fallback,
+        _ => Failed('Failed to save "$fileName"', error: e, stackTrace: st),
       };
     }
   }
@@ -147,6 +135,20 @@ final class WebFileSaver implements FileSaver {
         const Duration(minutes: 1),
         () => web.URL.revokeObjectURL(url),
       ),
+    );
+  }
+
+  @override
+  Future<Outcome<SaveLocation>> saveInto({
+    required String directory,
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    // The browser has no directory paths to write into; saveAs (a user-driven
+    // File System Access dialog) is the web way to place a file deliberately.
+    return const Unsupported(
+      'Directory-targeted saves are not available on web',
     );
   }
 }

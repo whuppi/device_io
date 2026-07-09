@@ -7,7 +7,7 @@ import 'package:web/web.dart' as web;
 import 'package:device_io/src/runtime/web/dom_exception.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/types/mime_types.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 // window.showOpenFilePicker — the File System Access open dialog. It hands
 // back blob-backed handles that read lazily, so a multi-select of large
@@ -41,7 +41,7 @@ extension type _FilePickerAcceptType._(JSObject _) implements JSObject {
 /// API is present, the returned assets read from their blob-backed handles
 /// on demand — nothing is loaded until [PickedAsset.readBytes] or
 /// [PickedAsset.readStream] is called.
-Future<PlatformResult<List<PickedAsset>>?> lazyWebFilePick({
+Future<Outcome<List<PickedAsset>>?> lazyWebFilePick({
   required bool allowMultiple,
   List<String>? allowedExtensions,
 }) async {
@@ -52,7 +52,7 @@ Future<PlatformResult<List<PickedAsset>>?> lazyWebFilePick({
       _buildOptions(allowMultiple, allowedExtensions),
     ).toDart).toDart;
 
-    if (handles.isEmpty) return const PlatformCancelled();
+    if (handles.isEmpty) return const Cancelled();
 
     final assets = <PickedAsset>[];
     for (final handle in handles) {
@@ -67,15 +67,15 @@ Future<PlatformResult<List<PickedAsset>>?> lazyWebFilePick({
         ),
       );
     }
-    return PlatformSuccess(assets);
+    return Success(assets);
   } catch (e, st) {
     if (e is Error) rethrow; // Programmer bugs crash loudly.
     if (domExceptionName(e, const ['AbortError']) != null) {
-      return const PlatformCancelled(); // User dismissed the dialog.
+      return const Cancelled(); // User dismissed the dialog.
     }
     // The dialog already opened; a failure after that is a real failure —
     // surface it rather than falling through to open a second dialog.
-    return PlatformFailed('Failed to pick files', error: e, stackTrace: st);
+    return Failed('Failed to pick files', error: e, stackTrace: st);
   }
 }
 

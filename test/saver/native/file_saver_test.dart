@@ -42,7 +42,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 
 import 'package:device_io/src/saver/native/file_saver.dart';
 import 'package:device_io/src/saver/save_location.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 import '../../harness/bytes.dart';
 import '../../harness/fake_path_provider.dart';
@@ -93,10 +93,9 @@ void main() {
           fileName: 'export.txt',
         );
 
-        expect(result, isA<PlatformSuccess<SaveLocation>>());
+        expect(result, isA<Success<SaveLocation>>());
         final path =
-            ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath)
-                .path;
+            ((result as Success<SaveLocation>).value as SavedAtPath).path;
         expect(path, '${downloads.path}/export.txt');
 
         final onDisk = File(path);
@@ -116,7 +115,7 @@ void main() {
       );
 
       final path =
-          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+          ((result as Success<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${downloads.path}/.._esc_ape.txt');
       final onDisk = File(path);
       expect(onDisk.existsSync(), isTrue);
@@ -132,10 +131,8 @@ void main() {
       );
       final r2 = await adapter.save(bytes: second, fileName: 'report.txt');
 
-      final p1 =
-          ((r1 as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
-      final p2 =
-          ((r2 as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+      final p1 = ((r1 as Success<SaveLocation>).value as SavedAtPath).path;
+      final p2 = ((r2 as Success<SaveLocation>).value as SavedAtPath).path;
       expect(p1, '${downloads.path}/report.txt');
       expect(p2, '${downloads.path}/report (1).txt');
 
@@ -152,7 +149,7 @@ void main() {
       );
 
       final path =
-          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+          ((result as Success<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${downloads.path}/MyApp/note.txt');
       final onDisk = File(path);
       expect(onDisk.existsSync(), isTrue);
@@ -169,7 +166,7 @@ void main() {
       );
 
       final path =
-          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+          ((result as Success<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${documents.path}/fallback.txt');
       expect(File(path).parent.path, documents.path);
       expect(Uint8List.fromList(File(path).readAsBytesSync()), utf8SampleBytes);
@@ -186,7 +183,7 @@ void main() {
       );
 
       final path =
-          ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+          ((result as Success<SaveLocation>).value as SavedAtPath).path;
       expect(path, '${downloads.path}/stream.bin');
 
       final onDisk = Uint8List.fromList(File(path).readAsBytesSync());
@@ -210,7 +207,7 @@ void main() {
           fileName: 'stream.bin',
         );
 
-        expect(result, isA<PlatformFailed<SaveLocation>>());
+        expect(result, isA<Failed<SaveLocation>>());
 
         // The reserved placeholder was cleaned, and no `.part` remains — the
         // directory holds no trace of the aborted write.
@@ -231,7 +228,7 @@ void main() {
         fileName: 'report.pdf',
       );
 
-      expect(result, isA<PlatformCancelled<SaveLocation>>());
+      expect(result, isA<Cancelled<SaveLocation>>());
     }, timeout: t(3));
 
     test('a path -> Success(SavedAtPath)', () async {
@@ -242,9 +239,9 @@ void main() {
         fileName: 'report.pdf',
       );
 
-      expect(result, isA<PlatformSuccess<SaveLocation>>());
+      expect(result, isA<Success<SaveLocation>>());
       expect(
-        ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path,
+        ((result as Success<SaveLocation>).value as SavedAtPath).path,
         '/chosen/report.pdf',
       );
     }, timeout: t(3));
@@ -276,8 +273,8 @@ void main() {
         fileName: 'report.pdf',
       );
 
-      expect(result, isA<PlatformFailed<SaveLocation>>());
-      final failed = result as PlatformFailed<SaveLocation>;
+      expect(result, isA<Failed<SaveLocation>>());
+      final failed = result as Failed<SaveLocation>;
       expect(failed.error, isA<PlatformException>());
       expect((failed.error! as PlatformException).code, 'io');
     }, timeout: t(3));

@@ -67,7 +67,7 @@ Four tabs, one per API surface:
 | **Save** | `saver` | Silent save to downloads, a streamed save, and the user-picks-destination system dialog. |
 | **Open** | `opener` | In-memory bytes in the default viewer, and the last silently-saved path. |
 
-Every call returns a sealed `PlatformResult`; one renderer switches the
+Every call returns a sealed `Outcome`; one renderer switches the
 family exhaustively and writes the outcome into the activity log, which
 sits below the tabs — global, so a result is never hidden by tab
 switching.

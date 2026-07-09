@@ -68,7 +68,7 @@ final class FakeSharePlatform extends SharePlatform
 /// public `DeviceIO.custom` seam. Records the last call; replies with the
 /// scripted [result].
 final class RecordingFileSaver implements FileSaver {
-  PlatformResult<SaveLocation> result = const PlatformSuccess(
+  Outcome<SaveLocation> result = const Success(
     SavedAtPath('/inmem/save/people.csv'),
   );
   Uint8List? lastBytes;
@@ -77,7 +77,7 @@ final class RecordingFileSaver implements FileSaver {
   String? lastDialogTitle;
 
   @override
-  Future<PlatformResult<SaveLocation>> save({
+  Future<Outcome<SaveLocation>> save({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -89,7 +89,7 @@ final class RecordingFileSaver implements FileSaver {
   }
 
   @override
-  Future<PlatformResult<SaveLocation>> saveStream({
+  Future<Outcome<SaveLocation>> saveStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -100,7 +100,7 @@ final class RecordingFileSaver implements FileSaver {
   }
 
   @override
-  Future<PlatformResult<SaveLocation>> saveAs({
+  Future<Outcome<SaveLocation>> saveAs({
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
@@ -112,20 +112,36 @@ final class RecordingFileSaver implements FileSaver {
     lastDialogTitle = dialogTitle;
     return result;
   }
+
+  String? lastDirectory;
+
+  @override
+  Future<Outcome<SaveLocation>> saveInto({
+    required String directory,
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    lastDirectory = directory;
+    lastBytes = bytes;
+    lastFileName = fileName;
+    lastMimeType = mimeType;
+    return result;
+  }
 }
 
 /// In-memory [FileOpener] for the open journey — same law as
 /// [RecordingFileSaver]: the io-bound adapter is charter-proven; the
 /// journey proves the UI wiring through `DeviceIO.custom`.
 final class RecordingFileOpener implements FileOpener {
-  PlatformResult<void> result = const PlatformSuccess(null);
+  Outcome<void> result = const Success(null);
   Uint8List? lastBytes;
   String? lastFileName;
   String? lastMimeType;
   String? lastPath;
 
   @override
-  Future<PlatformResult<void>> openBytes({
+  Future<Outcome<void>> openBytes({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -137,11 +153,20 @@ final class RecordingFileOpener implements FileOpener {
   }
 
   @override
-  Future<PlatformResult<void>> openPath({
+  Future<Outcome<void>> openPath({
     required String filePath,
     String? mimeType,
   }) async {
     lastPath = filePath;
+    lastMimeType = mimeType;
+    return result;
+  }
+
+  SaveLocation? lastLocation;
+
+  @override
+  Future<Outcome<void>> open(SaveLocation location, {String? mimeType}) async {
+    lastLocation = location;
     lastMimeType = mimeType;
     return result;
   }

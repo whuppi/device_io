@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:device_io/src/saver/save_location.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Platform-agnostic file saving to the device.
 ///
@@ -36,7 +36,7 @@ abstract interface class FileSaver {
   ///
   /// [mimeType] sets the blob content type on web; native platforms infer
   /// the type from the file extension and ignore it.
-  Future<PlatformResult<SaveLocation>> save({
+  Future<Outcome<SaveLocation>> save({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -53,7 +53,7 @@ abstract interface class FileSaver {
   ///
   /// [mimeType] sets the blob content type on web; native platforms infer
   /// the type from the file extension and ignore it.
-  Future<PlatformResult<SaveLocation>> saveStream({
+  Future<Outcome<SaveLocation>> saveStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -74,11 +74,24 @@ abstract interface class FileSaver {
   /// bytes as a plain download; it is ignored where the platform writes
   /// the bytes directly (native dialogs, File System Access).
   ///
-  /// Returns [PlatformCancelled] when the user dismisses the dialog.
-  Future<PlatformResult<SaveLocation>> saveAs({
+  /// Returns [Cancelled] when the user dismisses the dialog.
+  Future<Outcome<SaveLocation>> saveAs({
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
+    String? mimeType,
+  });
+
+  /// Silently write [bytes] into [directory] (from `AssetPicker.pickDirectory`),
+  /// with no-clobber numbering and name sanitization — the same guarantees as
+  /// [save], but into a caller-chosen folder instead of Downloads.
+  ///
+  /// Native only: the browser has no directory paths to write into, so web
+  /// returns [Unsupported].
+  Future<Outcome<SaveLocation>> saveInto({
+    required String directory,
+    required Uint8List bytes,
+    required String fileName,
     String? mimeType,
   });
 }

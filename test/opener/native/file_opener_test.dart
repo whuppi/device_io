@@ -8,7 +8,7 @@
 //       type 0  -> Success(null)
 //       type -1 -> Failed('No app available to open this file type')
 //       type -2 -> Failed('File not found: <path>')
-//       type -3 -> PlatformPermissionDenied(message carried)
+//       type -3 -> PermissionDenied(message carried)
 //       type -4 -> Failed(message carried)
 //       unknown -> Failed(message carried)
 //       null    -> Failed('File opener returned no response'), never a crash
@@ -44,7 +44,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import 'package:device_io/src/opener/native/file_opener.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 import '../../harness/bytes.dart';
 import '../../harness/fake_path_provider.dart';
@@ -123,16 +123,16 @@ void main() {
       final f = existingFile('a.pdf');
       reply(type: 0);
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformSuccess<void>>());
+      expect(r, isA<Success<void>>());
     }, timeout: t(3));
 
     test('type -1 -> Failed(no app)', () async {
       final f = existingFile('a.pdf');
       reply(type: -1);
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformFailed<void>>());
+      expect(r, isA<Failed<void>>());
       expect(
-        (r as PlatformFailed<void>).message,
+        (r as Failed<void>).message,
         'No app available to open this file type',
       );
     }, timeout: t(3));
@@ -141,48 +141,42 @@ void main() {
       final f = existingFile('a.pdf');
       reply(type: -2);
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformFailed<void>>());
-      expect((r as PlatformFailed<void>).message, 'File not found: ${f.path}');
+      expect(r, isA<Failed<void>>());
+      expect((r as Failed<void>).message, 'File not found: ${f.path}');
     }, timeout: t(3));
 
     test('type -3 -> PermissionDenied(message carried)', () async {
       final f = existingFile('a.pdf');
       reply(type: -3, message: 'permission was refused');
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformPermissionDenied<void>>());
-      expect(
-        (r as PlatformPermissionDenied<void>).message,
-        'permission was refused',
-      );
+      expect(r, isA<PermissionDenied<void>>());
+      expect((r as PermissionDenied<void>).message, 'permission was refused');
     }, timeout: t(3));
 
     test('type -4 -> Failed(message carried)', () async {
       final f = existingFile('a.pdf');
       reply(type: -4, message: 'boom');
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformFailed<void>>());
-      expect((r as PlatformFailed<void>).message, 'boom');
+      expect(r, isA<Failed<void>>());
+      expect((r as Failed<void>).message, 'boom');
     }, timeout: t(3));
 
     test('unknown code -> Failed(message carried)', () async {
       final f = existingFile('a.pdf');
       reply(type: 99, message: 'weird outcome');
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformFailed<void>>());
-      expect((r as PlatformFailed<void>).message, 'weird outcome');
+      expect(r, isA<Failed<void>>());
+      expect((r as Failed<void>).message, 'weird outcome');
     }, timeout: t(3));
 
     test('null channel response -> Failed, never crashes', () async {
       final f = existingFile('a.pdf');
       // invokeMethod<String> can resolve to null (old plugin, odd native
-      // state). It must surface as PlatformFailed, not a rethrown TypeError.
+      // state). It must surface as Failed, not a rethrown TypeError.
       _binding.setMockMethodCallHandler(_openFileChannel, (call) async => null);
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformFailed<void>>());
-      expect(
-        (r as PlatformFailed<void>).message,
-        'File opener returned no response',
-      );
+      expect(r, isA<Failed<void>>());
+      expect((r as Failed<void>).message, 'File opener returned no response');
     }, timeout: t(3));
 
     test('iOS routes to the same mobile channel', () async {
@@ -190,7 +184,7 @@ void main() {
       final f = existingFile('a.pdf');
       reply(type: 0);
       final r = await adapter.openPath(filePath: f.path);
-      expect(r, isA<PlatformSuccess<void>>());
+      expect(r, isA<Success<void>>());
       expect(lastCall!.method, 'open_file');
     }, timeout: t(3));
   });
@@ -203,7 +197,7 @@ void main() {
       fileName: 'my:doc.pdf', // ':' -> '_' on sanitize
     );
 
-    expect(r, isA<PlatformSuccess<void>>());
+    expect(r, isA<Success<void>>());
     expect(lastCall, isNotNull);
     final stagedPath = (lastCall!.arguments as Map)['file_path'] as String;
 

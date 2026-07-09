@@ -1,5 +1,5 @@
 import 'package:device_io/src/picker/picked_asset.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Lazy web file pick — not applicable off web.
 ///
@@ -7,7 +7,7 @@ import 'package:device_io/src/types/platform_result.dart';
 /// the web implementation (`web_file_pick_web.dart`) does real work; this
 /// stub is the default export so pana attributes the package to every
 /// platform.
-Future<PlatformResult<List<PickedAsset>>?> lazyWebFilePick({
+Future<Outcome<List<PickedAsset>>?> lazyWebFilePick({
   required bool allowMultiple,
   List<String>? allowedExtensions,
-}) => Future<PlatformResult<List<PickedAsset>>?>.value(null);
+}) => Future<Outcome<List<PickedAsset>>?>.value(null);

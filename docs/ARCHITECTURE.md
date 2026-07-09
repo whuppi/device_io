@@ -23,10 +23,10 @@ The load-bearing promises:
 
 1. **Consumers never branch on platform.** All platform handling lives
    inside this package. Where something is truly impossible on a
-   platform, the app receives a typed `PlatformUnsupported` value — not
+   platform, the app receives a typed `Unsupported` value — not
    an exception, not a crash, not a need for `kIsWeb` in app code.
 2. **Every outcome is a named value.** Operations return the sealed
-   `PlatformResult<T>`: `Success(value)` / `Cancelled` /
+   `Outcome<T>`: `Success(value)` / `Cancelled` /
    `Unsupported(reason)` / `Failed(message, error, stackTrace)`, with
    `PermissionDenied` as a `Failed` subtype (generic handling stays one
    `switch` arm; settings-prompt handling can match it specifically).
@@ -78,7 +78,7 @@ lib/
     types/
       device_io_config.dart    ← DeviceIOConfig for DeviceIO
       mime_types.dart          ← curated maps + package:mime-backed lookups
-      platform_result.dart     ← the sealed result family
+      outcome.dart             ← the sealed result family
     version.dart               ← 0.0.0 placeholder, stamped at release
 ```
 
@@ -130,8 +130,8 @@ plugin / OS / browser throws
         ▼
 adapter catch (e, st)
         ├── e is Error?            → rethrow (programmer bug, crash loudly)
-        ├── known permission code? → PlatformPermissionDenied(error: e, stackTrace: st)
-        └── otherwise              → PlatformFailed(message, error: e, stackTrace: st)
+        ├── known permission code? → PermissionDenied(error: e, stackTrace: st)
+        └── otherwise              → Failed(message, error: e, stackTrace: st)
 ```
 
 - Permission mapping matches image_picker's EXACT error codes (verified
@@ -145,11 +145,11 @@ adapter catch (e, st)
   and picker dismissal map to `Cancelled`.
 
 
-One vocabulary note: the sibling packages ban the word "platform" inside
-`lib/src/`; here it survives in exactly one place — the `PlatformResult`
-family — because that is shipped 1.0.0 public API. It is grandfathered:
-renaming it is a major-version decision, and new code never adds the
-word.
+One vocabulary note: like the sibling packages, the word "platform" names
+nothing in `lib/src/`. The public result family is `Outcome` (`Success` /
+`Cancelled` / `Unsupported` / `Failed` / `PermissionDenied`); the two
+runtime worlds are named directly (native / web). `Platform` appears only
+as Flutter's own `PlatformException` at the plugin edge.
 
 ---
 
@@ -199,7 +199,7 @@ alone proves: ...") and a Diet line naming what it consumes:
    genuine resolved/rejected promises, restored per test with
    prototype-chain awareness (instance methods like `navigator.share`
    live on the prototype).
-3. **`test/batteries/` (the one shared spec)** — the `PlatformResult`
+3. **`test/batteries/` (the one shared spec)** — the `Outcome`
    grammar as a single suite generator (`result_grammar_battery.dart`);
    adapters whose corners are injectable at a pure platform-interface
    seam plug in via `adapters_grammar_test.dart`, whose header is the

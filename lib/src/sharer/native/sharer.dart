@@ -18,14 +18,14 @@ import 'package:device_io/src/sharer/share_file.dart';
 import 'package:device_io/src/sharer/share_origin.dart';
 import 'package:device_io/src/sharer/sharer.dart';
 import 'package:device_io/src/types/mime_types.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Native (mobile/desktop) sharing via share_plus.
 ///
 /// Files are staged in the OS temporary directory before sharing.
 final class NativeSharer implements Sharer {
   @override
-  Future<PlatformResult<void>> shareText({
+  Future<Outcome<void>> shareText({
     required String text,
     String? subject,
     ShareOrigin? sharePositionOrigin,
@@ -41,12 +41,12 @@ final class NativeSharer implements Sharer {
       return _fromShareResult(result);
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
-      return PlatformFailed('Failed to share text', error: e, stackTrace: st);
+      return Failed('Failed to share text', error: e, stackTrace: st);
     }
   }
 
   @override
-  Future<PlatformResult<void>> shareFile({
+  Future<Outcome<void>> shareFile({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -65,7 +65,7 @@ final class NativeSharer implements Sharer {
   }
 
   @override
-  Future<PlatformResult<void>> shareFiles({
+  Future<Outcome<void>> shareFiles({
     required List<ShareFile> files,
     String? subject,
     String? text,
@@ -105,7 +105,7 @@ final class NativeSharer implements Sharer {
       return _fromShareResult(result);
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed(
+      return Failed(
         'Failed to share ${files.length} files',
         error: e,
         stackTrace: st,
@@ -114,7 +114,7 @@ final class NativeSharer implements Sharer {
   }
 
   @override
-  Future<PlatformResult<void>> shareFileStream({
+  Future<Outcome<void>> shareFileStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -139,7 +139,7 @@ final class NativeSharer implements Sharer {
     );
   }
 
-  Future<PlatformResult<void>> _shareStagedFile({
+  Future<Outcome<void>> _shareStagedFile({
     required String fileName,
     required String? mimeType,
     required String? subject,
@@ -170,11 +170,7 @@ final class NativeSharer implements Sharer {
       return _fromShareResult(result);
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed(
-        'Failed to share "$fileName"',
-        error: e,
-        stackTrace: st,
-      );
+      return Failed('Failed to share "$fileName"', error: e, stackTrace: st);
     }
   }
 
@@ -187,11 +183,11 @@ final class NativeSharer implements Sharer {
 
   /// `unavailable` means the platform cannot report an outcome — the sheet
   /// was still shown, so it maps to success, not to a failure.
-  PlatformResult<void> _fromShareResult(ShareResult result) {
+  Outcome<void> _fromShareResult(ShareResult result) {
     return switch (result.status) {
-      ShareResultStatus.dismissed => const PlatformCancelled(),
+      ShareResultStatus.dismissed => const Cancelled(),
       ShareResultStatus.success ||
-      ShareResultStatus.unavailable => const PlatformSuccess(null),
+      ShareResultStatus.unavailable => const Success(null),
     };
   }
 }
