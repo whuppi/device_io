@@ -63,7 +63,7 @@ Every call returns a typed result instead of throwing. A cancelled picker, an un
 
 ```yaml
 dependencies:
-  device_io:
+  device_io: ^2.0.0-dev.0
 ```
 
 Then call `DeviceIO()` once at startup and keep the result (see [Quick start](#quick-start)). The underlying plugins are federated, so there's no per-platform Dart to wire up.
