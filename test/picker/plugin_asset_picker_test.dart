@@ -1,23 +1,23 @@
 // CHARTER — this file alone proves the PluginAssetPicker's mapping
 // contract between the image_picker / file_picker plugins and the
-// PlatformResult<PickedAsset> surface:
+// Outcome<PickedAsset> surface:
 //   - option passthrough: maxWidth/maxHeight/imageQuality/limit/maxDuration and
 //     the ImageSource arrive at the platform fake exactly as sent (recorded and
 //     asserted), and each call routes to the RIGHT platform method;
 //   - XFile → lazy PickedAsset: readBytes returns the picked file's declared
 //     bytes, mimeType is inferred from fileName when the XFile has none and
 //     passed through when it does;
-//   - null / empty-selection → PlatformCancelled (never an empty Success);
+//   - null / empty-selection → Cancelled (never an empty Success);
 //   - captureImage/captureVideo are camera-gated on defaultTargetPlatform: iOS
-//     proceeds (source == camera), macOS returns PlatformUnsupported WITHOUT
+//     proceeds (source == camera), macOS returns Unsupported WITHOUT
 //     touching the fake;
-//   - the four image_picker permission codes → PlatformPermissionDenied
+//   - the four image_picker permission codes → PermissionDenied
 //     (carrying the original exception + a stack trace); an unknown code → a
-//     plain PlatformFailed that is NOT PermissionDenied; an Error (not
+//     plain Failed that is NOT PermissionDenied; an Error (not
 //     Exception) is RETHROWN, never swallowed;
 //   - file picks route through file_picker's method channel with the extension
 //     filter mapped to FileType.custom + allowedExtensions, null → Cancelled,
-//     a path-less platform file → PlatformFailed, and a real path → a lazy
+//     a path-less platform file → Failed, and a real path → a lazy
 //     asset whose readBytes reads the file's declared bytes.
 // Diet: patternedBytes/isPatterned from harness/bytes; fakes + TempWorkspace
 // from harness; inline literals declared in this file.
@@ -31,7 +31,7 @@ import 'dart:typed_data';
 import 'package:device_io/src/picker/image_options.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/picker/plugin_asset_picker.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/services.dart' show PlatformException;
@@ -70,9 +70,9 @@ void main() {
   });
 
   // Unwrap a Success<T> or fail loudly with the actual variant.
-  T supported<T>(PlatformResult<T> r) {
-    expect(r, isA<PlatformSuccess<T>>(), reason: 'expected Success, got $r');
-    return (r as PlatformSuccess<T>).value;
+  T supported<T>(Outcome<T> r) {
+    expect(r, isA<Success<T>>(), reason: 'expected Success, got $r');
+    return (r as Success<T>).value;
   }
 
   Future<void> expectBytes(PickedAsset asset, Uint8List declared) async {
@@ -118,7 +118,7 @@ void main() {
 
   test('pickImage maps a null pick to Cancelled', () async {
     fakeIp.single = null;
-    expect(await adapter.pickImage(), isA<PlatformCancelled<PickedAsset>>());
+    expect(await adapter.pickImage(), isA<Cancelled<PickedAsset>>());
   }, timeout: t(3));
 
   // ── pickImages: limit passthrough, order, empty → Cancelled ──
@@ -155,7 +155,7 @@ void main() {
     () async {
       fakeIp.multi = const [];
       final r = await adapter.pickImages();
-      expect(r, isA<PlatformCancelled<List<PickedAsset>>>());
+      expect(r, isA<Cancelled<List<PickedAsset>>>());
     },
     timeout: t(3),
   );
@@ -171,7 +171,7 @@ void main() {
     expect(fakeIp.called, isTrue);
     expect(fakeIp.route, PickerRoute.getImageFromSource);
     expect(fakeIp.source, ImageSource.camera);
-    expect(r, isA<PlatformSuccess<PickedAsset>>());
+    expect(r, isA<Success<PickedAsset>>());
   }, timeout: t(3));
 
   test(
@@ -179,7 +179,7 @@ void main() {
     () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       final r = await adapter.captureImage();
-      expect(r, isA<PlatformUnsupported<PickedAsset>>());
+      expect(r, isA<Unsupported<PickedAsset>>());
       expect(fakeIp.called, isFalse);
     },
     timeout: t(3),
@@ -210,7 +210,7 @@ void main() {
 
   test('pickVideo maps a null pick to Cancelled', () async {
     fakeIp.single = null;
-    expect(await adapter.pickVideo(), isA<PlatformCancelled<PickedAsset>>());
+    expect(await adapter.pickVideo(), isA<Cancelled<PickedAsset>>());
   }, timeout: t(3));
 
   test(
@@ -227,7 +227,7 @@ void main() {
       expect(fakeIp.route, PickerRoute.getVideo);
       expect(fakeIp.source, ImageSource.camera);
       expect(fakeIp.maxDuration, const Duration(minutes: 1));
-      expect(r, isA<PlatformSuccess<PickedAsset>>());
+      expect(r, isA<Success<PickedAsset>>());
     },
     timeout: t(3),
   );
@@ -237,7 +237,7 @@ void main() {
     () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       final r = await adapter.captureVideo();
-      expect(r, isA<PlatformUnsupported<PickedAsset>>());
+      expect(r, isA<Unsupported<PickedAsset>>());
       expect(fakeIp.called, isFalse);
     },
     timeout: t(3),
@@ -265,7 +265,7 @@ void main() {
 
   test('pickMedia maps an empty result to Cancelled', () async {
     fakeIp.multi = const [];
-    expect(await adapter.pickMedia(), isA<PlatformCancelled<PickedAsset>>());
+    expect(await adapter.pickMedia(), isA<Cancelled<PickedAsset>>());
   }, timeout: t(3));
 
   test('pickMultipleMedia routes to getMedia(allowMultiple:true), passes '
@@ -289,7 +289,7 @@ void main() {
   test('pickMultipleMedia maps an empty selection to Cancelled', () async {
     fakeIp.multi = const [];
     final r = await adapter.pickMultipleMedia();
-    expect(r, isA<PlatformCancelled<List<PickedAsset>>>());
+    expect(r, isA<Cancelled<List<PickedAsset>>>());
   }, timeout: t(3));
 
   // ── permission code mapping (table-driven) ──
@@ -309,8 +309,8 @@ void main() {
 
       final r = await adapter.pickImage();
 
-      expect(r, isA<PlatformPermissionDenied<PickedAsset>>());
-      final failed = r as PlatformPermissionDenied<PickedAsset>;
+      expect(r, isA<PermissionDenied<PickedAsset>>());
+      final failed = r as PermissionDenied<PickedAsset>;
       expect(failed.message, 'blocked: $code');
       expect(failed.error, same(ex));
       expect(failed.stackTrace, isNotNull);
@@ -318,7 +318,7 @@ void main() {
   }
 
   test(
-    'an unknown PlatformException code maps to a plain PlatformFailed that '
+    'an unknown PlatformException code maps to a plain Failed that '
     'is NOT PermissionDenied, carrying the exception + stack trace',
     () async {
       final ex = PlatformException(code: 'weird_error', message: 'huh');
@@ -326,9 +326,9 @@ void main() {
 
       final r = await adapter.pickImage();
 
-      expect(r, isA<PlatformFailed<PickedAsset>>());
-      expect(r, isNot(isA<PlatformPermissionDenied<PickedAsset>>()));
-      final failed = r as PlatformFailed<PickedAsset>;
+      expect(r, isA<Failed<PickedAsset>>());
+      expect(r, isNot(isA<PermissionDenied<PickedAsset>>()));
+      final failed = r as Failed<PickedAsset>;
       expect(failed.error, same(ex));
       expect(failed.stackTrace, isNotNull);
     },
@@ -338,7 +338,7 @@ void main() {
   // ── error physics: Errors rethrow, never convert ──
 
   test('an Error (not an Exception) thrown by the plugin is rethrown, never '
-      'converted to PlatformFailed', () async {
+      'converted to Failed', () async {
     fakeIp.error = ArgumentError('programmer bug');
     await expectLater(adapter.pickImage(), throwsA(isA<ArgumentError>()));
   }, timeout: t(3));
@@ -392,7 +392,7 @@ void main() {
   test('pickFiles maps a null channel result to Cancelled', () async {
     fakeFp.returnCancelled();
     final r = await adapter.pickFiles();
-    expect(r, isA<PlatformCancelled<List<PickedAsset>>>());
+    expect(r, isA<Cancelled<List<PickedAsset>>>());
   }, timeout: t(3));
 
   test('a returned platform file with no path fails the whole pick', () async {
@@ -400,7 +400,7 @@ void main() {
       {'name': 'ghost.bin', 'path': null, 'size': 3},
     ]);
     final r = await adapter.pickFiles();
-    expect(r, isA<PlatformFailed<List<PickedAsset>>>());
-    expect(r, isNot(isA<PlatformSuccess<List<PickedAsset>>>()));
+    expect(r, isA<Failed<List<PickedAsset>>>());
+    expect(r, isNot(isA<Success<List<PickedAsset>>>()));
   }, timeout: t(3));
 }

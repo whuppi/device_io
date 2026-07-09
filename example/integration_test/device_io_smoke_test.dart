@@ -39,8 +39,8 @@ void main() {
       bytes: Uint8List.fromList(utf8.encode(body)),
       fileName: name,
     );
-    expect(first, isA<PlatformSuccess<SaveLocation>>());
-    final firstLoc = (first as PlatformSuccess<SaveLocation>).value;
+    expect(first, isA<Success<SaveLocation>>());
+    final firstLoc = (first as Success<SaveLocation>).value;
 
     if (kIsWeb) {
       // A browser download has no observable path.
@@ -57,7 +57,7 @@ void main() {
       fileName: name,
     );
     final secondPath =
-        ((second as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+        ((second as Success<SaveLocation>).value as SavedAtPath).path;
     expect(secondPath, isNot(firstPath));
     expect(secondPath, contains('(1)'));
     expect(File(secondPath).readAsStringSync(), body);
@@ -79,12 +79,11 @@ void main() {
       byteStream: chunks(),
       fileName: 'smoke_stream_${DateTime.now().microsecondsSinceEpoch}.bin',
     );
-    expect(result, isA<PlatformSuccess<SaveLocation>>());
+    expect(result, isA<Success<SaveLocation>>());
 
     if (kIsWeb) return; // Buffered download; no path to read back.
 
-    final path =
-        ((result as PlatformSuccess<SaveLocation>).value as SavedAtPath).path;
+    final path = ((result as Success<SaveLocation>).value as SavedAtPath).path;
     final bytes = File(path).readAsBytesSync();
     expect(bytes.length, total);
     for (var i = 0; i < bytes.length; i++) {

@@ -10,9 +10,9 @@ import 'package:meta/meta.dart';
 /// ```dart
 /// final saved = await deviceIO.saver.save(bytes: bytes, fileName: 'a.pdf');
 /// switch (saved) {
-///   case PlatformSuccess(value: SavedAtPath(:final path)):
+///   case Success(value: SavedAtPath(:final path)):
 ///     await deviceIO.opener.openPath(filePath: path);
-///   case PlatformSuccess(value: SavedByBrowser()):
+///   case Success(value: SavedByBrowser()):
 ///     break; // the browser owns the file now
 ///   default:
 ///     showError(saved);

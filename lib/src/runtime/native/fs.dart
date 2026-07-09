@@ -156,6 +156,9 @@ Future<List<File>> stageFiles({
 /// Returns [name] if unclaimed, otherwise a numbered variant
 /// (`report (1).pdf`) that is not yet in [claimed]. Records the result in
 /// [claimed] before returning.
+// Unlike reserveFreshFile this needs no iteration cap: candidates only race
+// the in-memory set, never the filesystem, and every counter yields a new
+// distinct string — the loop terminates within claimed.length + 1 steps.
 String _uniqueName(String name, Set<String> claimed) {
   if (claimed.add(name)) return name;
 

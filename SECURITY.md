@@ -15,7 +15,7 @@ Report privately via [GitHub Security Advisories](https://github.com/whuppi/devi
 
 - **Vulnerabilities in the underlying plugins** not caused by how this package drives them — report upstream: [image_picker / path_provider](https://github.com/flutter/packages/issues), [file_picker](https://github.com/miguelpruivo/flutter_file_picker/issues), [share_plus](https://github.com/fluttercommunity/plus_plugins/issues), [open_filex](https://github.com/crazecoder/open_file/issues).
 - **Content of picked/saved/shared files** — bytes pass through untouched by design. Validating or scanning content is the app's job.
-- **Permission-denied outcomes** — surfaced as typed results (`PlatformPermissionDenied`), not vulnerabilities.
+- **Permission-denied outcomes** — surfaced as typed results (`PermissionDenied`), not vulnerabilities.
 - **Browser-imposed limits** — popup blockers, user-gesture requirements for share/save dialogs. The package degrades gracefully; the limits are the platform working as intended.
 - **Crashes from unusual file names or byte streams** — bugs, not vulnerabilities. Report them as [regular issues](https://github.com/whuppi/device_io/issues).
 

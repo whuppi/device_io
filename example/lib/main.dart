@@ -15,7 +15,7 @@
 //   Open   — opener: open in-memory bytes in the default
 //            viewer, and open the last silently-saved path.
 //
-// Every call returns a sealed PlatformResult. One renderer
+// Every call returns a sealed Outcome. One renderer
 // (_record) exhaustively switches the family and writes the outcome
 // into the activity log — the log sits below the TabBarView, global
 // across all tabs. All demo bytes are generated in code; nothing
@@ -64,7 +64,7 @@ class DeviceIOExampleApp extends StatelessWidget {
 // ── Activity log model ──────────────────────────────────────────────────
 
 /// Visual severity of a log line, mapped one-to-one onto the five outcomes
-/// of [PlatformResult].
+/// of [Outcome].
 enum LogLevel { success, neutral, warning, unsupported, error }
 
 class LogEntry {
@@ -100,39 +100,38 @@ class _HomePageState extends State<HomePage> {
   /// the "open last saved" button. Null on web (no filesystem paths) and
   /// before the first successful save.
   String? _lastSavedPath;
+  SaveLocation? _lastLocation;
+  String? _pickedDir;
 
   DeviceIO get _io => widget.deviceIO;
 
   // ── The pedagogical heart: one exhaustive switch over the sealed family ──
 
-  /// Render any [PlatformResult] into the activity log. Every device_io call
+  /// Render any [Outcome] into the activity log. Every device_io call
   /// funnels through here, so the five outcomes are handled in exactly one
-  /// place. `PlatformPermissionDenied` is matched before its `PlatformFailed`
+  /// place. `PermissionDenied` is matched before its `Failed`
   /// supertype so the actionable "open settings" hint wins.
   void _record<T>(
     String action,
-    PlatformResult<T> result, {
+    Outcome<T> result, {
     String Function(T value)? describe,
   }) {
     final entry = switch (result) {
-      PlatformSuccess<T>(:final value) => LogEntry(
+      Success<T>(:final value) => LogEntry(
         LogLevel.success,
         describe != null ? '$action → ${describe(value)}' : '$action → ok',
       ),
-      PlatformCancelled<T>() => LogEntry(
-        LogLevel.neutral,
-        '$action → cancelled',
-      ),
-      PlatformPermissionDenied<T>(:final message) => LogEntry(
+      Cancelled<T>() => LogEntry(LogLevel.neutral, '$action → cancelled'),
+      PermissionDenied<T>(:final message) => LogEntry(
         LogLevel.warning,
         '$action → permission denied ($message). Open Settings to grant '
         'access.',
       ),
-      PlatformUnsupported<T>(:final reason) => LogEntry(
+      Unsupported<T>(:final reason) => LogEntry(
         LogLevel.unsupported,
         '$action → unsupported: $reason',
       ),
-      PlatformFailed<T>(:final message) => LogEntry(
+      Failed<T>(:final message) => LogEntry(
         LogLevel.error,
         '$action → failed: $message',
       ),
@@ -210,23 +209,20 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _absorbOne(PlatformResult<PickedAsset> result) {
-    if (result case PlatformSuccess(:final value)) {
+  void _absorbOne(Outcome<PickedAsset> result) {
+    if (result case Success(:final value)) {
       setState(() => _picked.add(PickedItem(value)));
     }
   }
 
-  void _absorbMany(PlatformResult<List<PickedAsset>> result) {
-    if (result case PlatformSuccess(:final value)) {
+  void _absorbMany(Outcome<List<PickedAsset>> result) {
+    if (result case Success(:final value)) {
       setState(() => _picked.addAll(value.map(PickedItem.new)));
     }
   }
 
   /// Overload-style helper for single-asset picks: logs with the file name.
-  void _recordAsset(
-    PlatformResult<PickedAsset> result, {
-    required String action,
-  }) {
+  void _recordAsset(Outcome<PickedAsset> result, {required String action}) {
     _record(
       action,
       result,
@@ -306,9 +302,7 @@ class _HomePageState extends State<HomePage> {
       fileName: 'people.csv',
       mimeType: 'text/csv',
     );
-    if (result case PlatformSuccess(value: SavedAtPath(:final path))) {
-      setState(() => _lastSavedPath = path);
-    }
+    _rememberSaved(result);
     _record('Save CSV', result, describe: _describeLocation);
   }
 
@@ -318,9 +312,7 @@ class _HomePageState extends State<HomePage> {
       fileName: 'log.txt',
       mimeType: 'text/plain',
     );
-    if (result case PlatformSuccess(value: SavedAtPath(:final path))) {
-      setState(() => _lastSavedPath = path);
-    }
+    _rememberSaved(result);
     _record('Save stream', result, describe: _describeLocation);
   }
 
@@ -331,7 +323,46 @@ class _HomePageState extends State<HomePage> {
       dialogTitle: 'Save example export',
       mimeType: 'text/csv',
     );
+    _rememberSaved(result);
     _record('Save as…', result, describe: _describeLocation);
+  }
+
+  Future<void> _pickDirectory() async {
+    final result = await _io.picker.pickDirectory(
+      dialogTitle: 'Choose an export folder',
+    );
+    if (result case Success(:final value)) {
+      setState(() => _pickedDir = value);
+    }
+    _record('Pick directory', result, describe: (dir) => dir);
+  }
+
+  Future<void> _saveInto() async {
+    final dir = _pickedDir;
+    if (dir == null) return;
+    final result = await _io.saver.saveInto(
+      directory: dir,
+      bytes: _utf8('exported,into,chosen,folder\n1,2,3,4\n'),
+      fileName: 'into.csv',
+      mimeType: 'text/csv',
+    );
+    _record('Save into folder', result, describe: _describeLocation);
+  }
+
+  Future<void> _openLocation() async {
+    final loc = _lastLocation;
+    if (loc == null) return;
+    final result = await _io.opener.open(loc, mimeType: 'text/csv');
+    _record<void>('Open saved location', result);
+  }
+
+  void _rememberSaved(Outcome<SaveLocation> result) {
+    if (result case Success(:final value)) {
+      setState(() {
+        _lastLocation = value;
+        if (value case SavedAtPath(:final path)) _lastSavedPath = path;
+      });
+    }
   }
 
   String _describeLocation(SaveLocation loc) => switch (loc) {
@@ -477,6 +508,10 @@ class _HomePageState extends State<HomePage> {
                   onPressed: _pickFiles,
                   child: const Text('pickFiles'),
                 ),
+                FilledButton.tonal(
+                  onPressed: _pickDirectory,
+                  child: const Text('pickDirectory'),
+                ),
               ],
             ),
             if (_picked.isNotEmpty) ...[
@@ -552,6 +587,10 @@ class _HomePageState extends State<HomePage> {
                   onPressed: _saveAs,
                   child: const Text('saveAs'),
                 ),
+                FilledButton.tonal(
+                  onPressed: _pickedDir != null ? _saveInto : null,
+                  child: const Text('saveInto (picked folder)'),
+                ),
               ],
             ),
             if (_lastSavedPath != null) ...[
@@ -585,6 +624,10 @@ class _HomePageState extends State<HomePage> {
                 FilledButton.tonal(
                   onPressed: _lastSavedPath != null ? _openLastSaved : null,
                   child: const Text('openPath (last saved)'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _lastLocation != null ? _openLocation : null,
+                  child: const Text('open (last location)'),
                 ),
               ],
             ),
