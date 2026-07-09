@@ -21,13 +21,13 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
 import 'package:device_io/src/saver/save_location.dart';
-import 'package:device_io/src/saver/web/web_file_saver.dart';
+import 'package:device_io/src/saver/web/file_saver.dart';
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
 
-import '../harness/bytes.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {

@@ -1,9 +1,13 @@
-// PlatformResult contract: construction, exhaustive pattern matching,
-// the PermissionDenied⊂Failed subtype relationship (and its arm-order
-// consequence), and toString diagnostics.
-import 'package:flutter_test/flutter_test.dart';
+// CHARTER — this file alone proves the PlatformResult vocabulary itself:
+// each variant constructs const and pattern-matches exhaustively;
+// PermissionDenied IS-A Failed (the subtype every failure-matching arm
+// must order around); Success carries its value, Failed its message /
+// error / stackTrace, Unsupported its reason. Diet: pure construction —
+// no adapters, no fakes; the cross-adapter grammar lives in
+// test/batteries/.
 
 import 'package:device_io/src/types/platform_result.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const success = PlatformSuccess<int>(42);

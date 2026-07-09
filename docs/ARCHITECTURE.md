@@ -51,7 +51,7 @@ Alpha-sorted as the IDE shows it; the order is the reading order.
 lib/
   device_io.dart               ← barrel: sectioned exports, quick-start doc
   src/
-    _shared/
+    runtime/{native,web}/ (world support)
       native_fs.dart           ← dart:io helpers: sanitize / reserve / stage
     opener/
       file_opener.dart         ← contract: openBytes / openPath
@@ -109,6 +109,17 @@ path-less-file guard that only fires off-web) are `kIsWeb`/`defaultTargetPlatfor
 branches, not file splits. A per-platform pair there would be a fake
 matrix: two near-identical copies.
 
+Where pairs DO exist, the world lives in the directory and the filename
+stays plain — `saver/native/file_saver.dart` / `saver/web/file_saver.dart`
+— while class names carry the world (`NativeFileSaver` / `WebFileSaver`)
+because both are real, importable types that `runtime/resolve_*.dart`
+wires explicitly. `runtime/native/` and `runtime/web/` are also the home
+for each world's cross-domain support (`fs.dart`, `dom_exception.dart`) —
+there is no shared junk drawer. And there are zero `Platform.isX`
+branches anywhere in `lib/src/`: OS differences live inside the wrapped
+plugins; the single `kIsWeb` sits flagged in the one deliberately
+cross-world adapter.
+
 ---
 
 ## 5. Error physics
@@ -133,9 +144,16 @@ adapter catch (e, st)
 - Share sheet dismissal (`ShareResultStatus.dismissed`, web `AbortError`)
   and picker dismissal map to `Cancelled`.
 
+
+One vocabulary note: the sibling packages ban the word "platform" inside
+`lib/src/`; here it survives in exactly one place — the `PlatformResult`
+family — because that is shipped 1.0.0 public API. It is grandfathered:
+renaming it is a major-version decision, and new code never adds the
+word.
+
 ---
 
-## 6. Filesystem safety (`_shared/native_fs.dart`)
+## 6. Filesystem safety (`runtime/native/fs.dart`)
 
 | Helper | Guarantee |
 |---|---|
@@ -169,19 +187,26 @@ Three layers, every file opening with a CHARTER comment ("this file
 alone proves: ...") and a Diet line naming what it consumes:
 
 1. **Mirror suites (VM)** — tests mirror `lib/src/` one concern per
-   file: `test/types/`, `test/_shared/`, `test/picker/`,
+   file: `test/types/`, `test/runtime/`, `test/picker/`,
    `test/saver/`, `test/sharer/`, `test/opener/`. Plugins are never
    imported; they're substituted at their platform-INTERFACE seams
    (recording fakes in `test/harness/`) or their method channels are
    mocked with the exact protocol verified from plugin source. Native
    adapter tests assert real on-disk effects.
-2. **`test/web_runners/` (real Chrome)** — the web adapters run in an
+2. **`test/platform/web/` (real Chrome)** — the web adapters run in an
    actual browser (`make test-web`). The JS surface the adapters call is
    instrumented: globals replaced with recording closures scripting
    genuine resolved/rejected promises, restored per test with
    prototype-chain awareness (instance methods like `navigator.share`
    live on the prototype).
-3. **Harness** — `Timeout.factor`-based `t()` (CI's `--timeout=30x`
+3. **`test/batteries/` (the one shared spec)** — the `PlatformResult`
+   grammar as a single suite generator (`result_grammar_battery.dart`);
+   adapters whose corners are injectable at a pure platform-interface
+   seam plug in via `adapters_grammar_test.dart`, whose header is the
+   corner table (including the named deferrals). This is the
+   batteries idea applied where device_io genuinely has ONE spec:
+   adapter × result-contract, not platform × implementation.
+4. **Harness** — `Timeout.factor`-based `t()` (CI's `--timeout=30x`
    scales, local stays tight), declared-truth byte fixtures
    (prime-modulus patterned bytes whose integrity check catches any
    dropped/duplicated/reordered chunk), the recording fakes.
@@ -190,7 +215,7 @@ Assertions are behavioral, never liveness: fakes record what they were
 asked so option passthrough is asserted from the recorded request, and
 results are compared to truths DECLARED in the test — never re-derived
 from the code under test. `make test-guards` mechanically enforces the
-import rules (browser imports only under `web_runners/`; `dart:io`
+import rules (browser imports only under `test/platform/web/`; `dart:io`
 outside the native-adapter suites carries an `io-exempt:` reason; no
 test imports a plugin's own Dart).
 

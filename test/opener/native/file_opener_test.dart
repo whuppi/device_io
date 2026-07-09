@@ -43,12 +43,12 @@ import 'package:flutter/services.dart' show MethodCall, MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
-import 'package:device_io/src/opener/native/native_file_opener.dart';
+import 'package:device_io/src/opener/native/file_opener.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
-import '../harness/bytes.dart';
-import '../harness/fake_path_provider.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/fake_path_provider.dart';
+import '../../harness/timeouts.dart';
 
 const _openFileChannel = MethodChannel('open_file');
 

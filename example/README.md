@@ -45,7 +45,11 @@ make verify-macos           # release build; also: -android, -ios, -linux, -wind
 ```
 
 The host journeys stay in memory (no `dart:io`) — they drive the UI
-through the real adapters against scripted plugin edges. Real
+through the real adapters against scripted plugin edges where the
+adapter is seam-scriptable (pick, share); the io-bound flows (save,
+open) inject recording capabilities at the public `DeviceIO.custom`
+seam, so the journey proves the UI wiring and the adapter's own
+charter proves the adapter. Real
 filesystem effects (silent saves with the no-clobber proof, streamed
 saves, asset round-trips) live in the integration smoke, which runs on
 a real device where async I/O behaves normally. Pickers, share sheets,

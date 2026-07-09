@@ -55,7 +55,7 @@ the fix. iOS needs the three usage-description keys.
    assumed.
 3. Follow the error physics: catch `(e, st)`, rethrow `Error`s, capture
    `stackTrace`, map known permission codes.
-4. Any filesystem write goes through `_shared/native_fs.dart` helpers.
+4. Any filesystem write goes through `runtime/native/fs.dart` helpers.
 5. Battery + runners cover it (VM + Chrome where reachable).
 6. Update `CAPABILITY_ROADMAP.md` row and the changelog lane.
 

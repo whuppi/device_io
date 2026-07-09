@@ -88,11 +88,11 @@ When in doubt, read existing code in this repo and match it. Per-repo style cons
 
 **Expected failures are values, never throws.** Adapters return `PlatformResult`, capture stack traces into failures, and rethrow `Error`s so programmer bugs crash loudly. Never convert a programmer error into a `PlatformFailed`. Every `PlatformUnsupported` must be evidence-backed against plugin source, not assumed.
 
-**Filesystem writes go through `lib/src/_shared/native_fs.dart`** (sanitize / atomic reserve / stage). Never interpolate a caller-supplied fileName into a path directly.
+**Filesystem writes go through `lib/src/runtime/{native,web}/native_fs.dart`** (sanitize / atomic reserve / stage). Never interpolate a caller-supplied fileName into a path directly.
 
 **Pinned plugin behaviors and platform entitlements** are tabulated in `docs/UPDATING.md` — the open_filex channel protocol, `saveFile` bytes semantics, the permission-code list, and the macOS Downloads/user-selected entitlements a consumer app must declare. Re-verify on every dependency bump.
 
-**Tests mirror `lib/src/` (VM) with the web adapters in real Chrome under `test/web_runners/`.** Every test file opens with a CHARTER stating what it alone proves; assertions are behavioral against declared truths, never liveness. Host-VM example journeys stay in memory (no `dart:io`); real filesystem effects live in the integration smoke.
+**Tests mirror `lib/src/` (VM); browser-bound suites are quarantined under `test/platform/web/` (the only tree `dart test -p chrome` compiles); the runtime/resolve layer is pinned in `test/runtime/`; the cross-adapter PlatformResult grammar lives as one spec in `test/batteries/`.** Every test file opens with a CHARTER stating what it alone proves; assertions are behavioral against declared truths, never liveness. Host-VM example journeys stay in memory (no `dart:io`); real filesystem effects live in the integration smoke.
 
 ---
 

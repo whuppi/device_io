@@ -8,7 +8,7 @@
 // tearDown. Nothing here fakes a green: every override delegates to a real
 // scripted outcome the adapter must map correctly.
 //
-// This helper lives under test/web_runners/ — the only directory the suite
+// This helper lives under test/platform/webers/ — the only directory the suite
 // guards permit package:web + dart:js_interop.
 
 import 'dart:js_interop';

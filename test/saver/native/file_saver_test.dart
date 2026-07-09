@@ -40,13 +40,13 @@ import 'package:flutter/services.dart'
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
-import 'package:device_io/src/saver/native/native_file_saver.dart';
+import 'package:device_io/src/saver/native/file_saver.dart';
 import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/types/platform_result.dart';
 
-import '../harness/bytes.dart';
-import '../harness/fake_path_provider.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/fake_path_provider.dart';
+import '../../harness/timeouts.dart';
 
 // The file_picker method channel (name verified above). StandardMethodCodec
 // matches the plugin's own channel construction.

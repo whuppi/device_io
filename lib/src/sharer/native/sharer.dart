@@ -13,7 +13,7 @@ import 'dart:ui' show Rect;
 // SharePlatform.instance, so behavior is identical.
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 
-import 'package:device_io/src/_shared/native_fs.dart';
+import 'package:device_io/src/runtime/native/fs.dart';
 import 'package:device_io/src/sharer/share_file.dart';
 import 'package:device_io/src/sharer/share_origin.dart';
 import 'package:device_io/src/sharer/sharer.dart';

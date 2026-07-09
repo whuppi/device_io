@@ -17,13 +17,13 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
 import 'package:device_io/src/sharer/share_file.dart';
-import 'package:device_io/src/sharer/web/web_sharer.dart';
+import 'package:device_io/src/sharer/web/sharer.dart';
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
 
-import '../harness/bytes.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {

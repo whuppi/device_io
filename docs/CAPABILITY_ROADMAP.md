@@ -41,7 +41,7 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | `saveAs` via system dialog | DONE | SAF (Android) / Files export (iOS) / native dialog (desktop) / File System Access with download fallback (web); `mimeType` feeds the fallback's blob type |
 | Web streaming `saveAs` writes | DONE | `FileSystemWritableFileStream` on Chromium |
 | Silent save to PUBLIC storage on mobile | WONT_DO (for now) | Android-only gap (desktop/web `save` already land user-visible; iOS has no public Downloads at all) whose fix needs first-party MediaStore native code — an identity change from plugin-wrapper to plugin. `saveAs` is the user-visible mobile answer. Revisit if a consumer app needs background exports to public storage. |
-| Silent streaming saves on web | WONT_DO (for now) | A no-dialog streaming write needs a File System Access handle, which only user-initiated dialogs can produce; revisit if a handle-reuse API is added |
+| Silent streaming saves on web | WONT_DO (for now) | A no-dialog streaming write needs a File System Access handle; handles can be persisted (IndexedDB) but re-activating one still requires a user-gesture permission grant, so "silent" stays impossible. Revisit if the gesture requirement is relaxed |
 
 ## Opening — `FileOpener`
 
@@ -67,6 +67,8 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 |---|---|---|
 | Strict lints + zero-issue analyzer | DONE | |
 | Makefile gates (format / analyze / analyze-floor / platforms) | DONE | |
-| Test suite (mirror VM suites + real-Chrome web runners) | DONE | Chartered behavioral tests; recording fakes at platform-interface seams; instrumented JS surface in real Chrome; mechanical guards (`make test-guards`). Shape in `ARCHITECTURE.md` |
-| Example app | DONE | Six platforms, one exhaustive `PlatformResult` renderer, lazy reads on tap; the integration smoke test joins the test-suite rebuild |
-| CI via the shared workflow repo | DONE | First consumer of `whuppi/ci@v1.0.0`. Thin caller stubs over the reusable workflows; fast PR gate in `ci.yml` (format/analyze/floor/platforms/guards/unit/web via `make-target`); label-triggered cross-target matrix in `full-test.yml` (package × OS, host journeys, real-device integration smokes, release verify); release via the reusable gate → discover → publish workflow (no binaries). Shared-CI upgrades arrive as grouped Dependabot PRs, tested by that PR's own CI |
+| Test suite (mirror VM suites · runtime layer · grammar battery · real-Chrome quarantine) | DONE | Chartered behavioral tests; recording fakes at platform-interface seams; the runtime/resolve layer pinned in `test/runtime/`; the cross-adapter `PlatformResult` grammar as one spec in `test/batteries/`; browser charters under `test/platform/web/`; mechanical guards (`make test-guards`). Shape in `ARCHITECTURE.md` §8 |
+| Example app | DONE | Six platforms, one exhaustive `PlatformResult` renderer, lazy reads on tap; host journeys cover all four tabs (pick / share / save / open + cross-tab plumb); the integration smoke proves real filesystem effects on-device |
+| CI via the shared workflow repo | DONE | First consumer of `whuppi/ci` (born on v1.0.0; pinned per-workflow and bumped by grouped Dependabot PRs — currently v2.0.4). Thin caller stubs over the reusable workflows; fast PR gate in `ci.yml` (format/analyze/floor/platforms/guards/unit/web via `make-target`); label-triggered cross-target matrix in `full-test.yml` (package × OS, host journeys, real-device integration smokes, release verify); release via the reusable gate → discover → publish workflow (no binaries). Shared-CI upgrades arrive as grouped Dependabot PRs, tested by that PR's own CI |
+| Published to pub.dev | DONE | `1.0.0` stable live under the verified publisher (whuppi.com); 160/160 pana; two-lane changelogs drive the release train (prerelease from dev, stable from prod, env-gated publish approval) |
+| pub.dev listing | DONE | Novice-first description (≤180 chars, scored range), five searched topics, README banner (light/dark `<picture>`, flattened to `<img>` in the published tarball) |

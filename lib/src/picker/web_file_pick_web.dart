@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-import 'package:device_io/src/_shared/dom_exception.dart';
+import 'package:device_io/src/runtime/web/dom_exception.dart';
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/types/mime_types.dart';
 import 'package:device_io/src/types/platform_result.dart';

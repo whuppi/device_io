@@ -11,16 +11,16 @@
 // entries with numbered variants, and lands them all in ONE directory.
 // Diet: inline table literals + patternedBytes/isPatterned from harness/bytes.
 
-// No io-exempt marker needed: test/_shared is exempt because the SUBJECT
-// (native_fs.dart) wraps dart:io.
+// io-exempt: the SUBJECT is the native world's dart:io wrapper — this
+// suite exercises it against a real temp directory by design.
 import 'dart:io';
 
-import 'package:device_io/src/_shared/native_fs.dart';
+import 'package:device_io/src/runtime/native/fs.dart';
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
 
-import '../harness/bytes.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/timeouts.dart';
 
 // path_provider's getTemporaryDirectory() goes through this channel on the
 // test VM (MethodChannelPathProvider). stageFile/stageFiles call into it, so

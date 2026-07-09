@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'package:device_io/src/_shared/native_fs.dart';
+import 'package:device_io/src/runtime/native/fs.dart';
 import 'package:device_io/src/saver/file_saver.dart';
 import 'package:device_io/src/saver/save_location.dart';
 import 'package:device_io/src/types/platform_result.dart';

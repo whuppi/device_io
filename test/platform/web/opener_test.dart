@@ -10,12 +10,12 @@ library;
 
 import 'dart:js_interop';
 
-import 'package:device_io/src/opener/web/web_file_opener.dart';
+import 'package:device_io/src/opener/web/file_opener.dart';
 import 'package:device_io/src/types/platform_result.dart';
 import 'package:test/test.dart';
 
-import '../harness/bytes.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {

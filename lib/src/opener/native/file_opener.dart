@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/services.dart' show MethodChannel;
 
-import 'package:device_io/src/_shared/native_fs.dart';
+import 'package:device_io/src/runtime/native/fs.dart';
 import 'package:device_io/src/opener/file_opener.dart';
 import 'package:device_io/src/types/platform_result.dart';
 

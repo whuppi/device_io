@@ -4,7 +4,7 @@
 // and without an extension filter. Null is the signal that means "the File
 // System Access path doesn't apply here"; it is what makes a native file pick
 // always fall through to the file_picker path in the adapter. This is the VM
-// side of the platform seam; the web side lives in test/web_runners.
+// side of the platform seam; the web side lives in test/platform/webers.
 // Diet: inline literals declared in this file.
 
 import 'package:device_io/src/picker/web_file_pick.dart';
