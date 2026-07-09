@@ -302,12 +302,7 @@ class _HomePageState extends State<HomePage> {
       fileName: 'people.csv',
       mimeType: 'text/csv',
     );
-    if (result case Success(:final value)) {
-      setState(() {
-        _lastLocation = value;
-        if (value case SavedAtPath(:final path)) _lastSavedPath = path;
-      });
-    }
+    _rememberSaved(result);
     _record('Save CSV', result, describe: _describeLocation);
   }
 
@@ -317,9 +312,7 @@ class _HomePageState extends State<HomePage> {
       fileName: 'log.txt',
       mimeType: 'text/plain',
     );
-    if (result case Success(value: SavedAtPath(:final path))) {
-      setState(() => _lastSavedPath = path);
-    }
+    _rememberSaved(result);
     _record('Save stream', result, describe: _describeLocation);
   }
 
@@ -330,6 +323,7 @@ class _HomePageState extends State<HomePage> {
       dialogTitle: 'Save example export',
       mimeType: 'text/csv',
     );
+    _rememberSaved(result);
     _record('Save as…', result, describe: _describeLocation);
   }
 
@@ -360,6 +354,15 @@ class _HomePageState extends State<HomePage> {
     if (loc == null) return;
     final result = await _io.opener.open(loc, mimeType: 'text/csv');
     _record<void>('Open saved location', result);
+  }
+
+  void _rememberSaved(Outcome<SaveLocation> result) {
+    if (result case Success(:final value)) {
+      setState(() {
+        _lastLocation = value;
+        if (value case SavedAtPath(:final path)) _lastSavedPath = path;
+      });
+    }
   }
 
   String _describeLocation(SaveLocation loc) => switch (loc) {

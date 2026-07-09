@@ -439,20 +439,20 @@ One API, six targets. The matrix below is per **method**, and every cell is a ty
 
 - ✅ **works** — same call, same result shape
 - ⚠️ **works, with a platform nuance** — see the matching note
-- ❌ **returns `Unsupported`** — a typed result your code can branch on, never a crash or a silent no-op
+- ❌ **returns `Unsupported`** — a typed result your code can branch on, never a crash or a silent no-op; its note says why and what to use instead
 
 | What you call | Android | iOS | macOS | Windows | Linux | Web |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
 | Pick images / videos / media | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Pick generic files | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️¹ |
-| Camera capture | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️² |
-| `pickDirectory` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Camera capture | ✅ | ✅ | ❌⁷ | ❌⁷ | ❌⁷ | ⚠️² |
+| `pickDirectory` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌⁸ |
 | Share text / files / streams | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️³ |
 | `save` / `saveStream` (silent) | ⚠️⁴ | ⚠️⁴ | ✅ | ✅ | ✅ | ⚠️⁵ |
 | `saveAs` (dialog) | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️⁶ |
-| `saveInto` (picked folder) | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `saveInto` (picked folder) | ✅ | ✅ | ✅ | ✅ | ✅ | ❌⁸ |
 | `openBytes` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `openPath` / `open(SaveLocation)` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `openPath` / `open(SaveLocation)` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌⁹ |
 
 1. Single file picks read lazily everywhere. A **multi**-file pick buffers up front on Firefox/Safari (no File System Access there); Chromium stays lazy.
 2. Mobile browsers ✅ (the file input's `capture` hint opens the camera). Desktop browsers ignore that hint — they'd silently show a plain file picker instead — so the package answers ❌ there rather than fake a capture.
@@ -460,8 +460,11 @@ One API, six targets. The matrix below is per **method**, and every cell is a ty
 4. Saves succeed but land in **app-private** storage — invisible in the Files app, gone on uninstall. For a save the user can find, use `saveAs`. Details in [Where saves land](#where-saves-land).
 5. Becomes a browser download — the browser decides the location, and a stream is buffered first (browsers can't stream without a dialog).
 6. File System Access dialog on Chromium (real streaming writes); plain download on Firefox/Safari.
+7. Desktop has no system camera dialog to borrow — the image_picker desktop implementations throw unless you build your own capture UI. An in-app camera is a widget's job: use the [`camera`](https://pub.dev/packages/camera) plugin. Picking an *existing* photo works fine (`pickImage`).
+8. Browsers don't expose directory paths, so there's no folder to pick or save into. The web equivalent of the pick-once-save-many flow is `saveAs` per file.
+9. Filesystem paths don't exist on web, and a downloaded file belongs to the browser (no handle to reopen). `openBytes` is the web way to put content on screen.
 
-The rule behind every ❌ and ⚠️: **the package never guesses.** Where a platform can't do something you get a typed `Unsupported` to branch on — hide the button, or fall back (`openBytes` instead of `openPath`, `saveAs` instead of `saveInto`). Your app never writes `kIsWeb`.
+The rule behind every ❌ and ⚠️: **the package never guesses.** Where a platform can't do something you get a typed `Unsupported` to branch on — hide the button, or take the note's fallback. Your app never writes `kIsWeb`.
 
 <details>
 <summary><b>🧩 what's under each verb?</b></summary>

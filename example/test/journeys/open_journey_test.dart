@@ -115,4 +115,39 @@ void main() {
     );
     expect(find.textContaining('Open saved location → ok'), findsOneWidget);
   });
+
+  testWidgets('every save door hands its own location to open-last-location', (
+    tester,
+  ) async {
+    // Regression guard: _saveStream and _saveAs must also capture the
+    // location — a save door that forgets leaves the button dead (or,
+    // worse, opening a STALE location from an earlier door). Each door
+    // gets a distinct scripted location and the opener must receive
+    // exactly that one.
+    await tester.pumpWidget(DeviceIOExampleApp(deviceIO: deviceIO));
+    await settle(tester);
+    await tester.tap(find.text('Save'));
+    await settle(tester);
+
+    for (final door in ['saveStream', 'saveAs']) {
+      saver.result = Success(SavedAtPath('/inmem/$door/out.bin'));
+      await tester.tap(find.text(door));
+      await settle(tester);
+      await tester.tap(find.text('Open'));
+      await settle(tester);
+      await tester.tap(find.text('open (last location)'));
+      await settle(tester);
+      expect(
+        opener.lastLocation,
+        isA<SavedAtPath>().having(
+          (l) => l.path,
+          'path',
+          '/inmem/$door/out.bin',
+        ),
+        reason: '$door did not capture its location',
+      );
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+    }
+  });
 }
