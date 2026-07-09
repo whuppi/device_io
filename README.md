@@ -455,7 +455,7 @@ One API, six targets. The matrix below is per **method**, and every cell is a ty
 | `openPath` / `open(SaveLocation)` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 1. Single file picks read lazily everywhere. A **multi**-file pick buffers up front on Firefox/Safari (no File System Access there); Chromium stays lazy.
-2. Mobile browsers ✅ (the file input's `capture` attribute). Desktop browsers ❌ — same as desktop apps.
+2. Mobile browsers ✅ (the file input's `capture` hint opens the camera). Desktop browsers ignore that hint — they'd silently show a plain file picker instead — so the package answers ❌ there rather than fake a capture.
 3. Rides the browser's Web Share API: needs HTTPS, and *file* sharing is supported in fewer browsers than text. Where it's absent you get `Unsupported`, not a broken sheet.
 4. Saves succeed but land in **app-private** storage — invisible in the Files app, gone on uninstall. For a save the user can find, use `saveAs`. Details in [Where saves land](#where-saves-land).
 5. Becomes a browser download — the browser decides the location, and a stream is buffered first (browsers can't stream without a dialog).

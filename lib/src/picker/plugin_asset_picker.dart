@@ -33,10 +33,17 @@ final class PluginAssetPicker implements AssetPicker {
 
   /// Camera capture works wherever the device is a phone/tablet — native
   /// apps AND mobile browsers (image_picker's web implementation sets the
-  /// input `capture` attribute, which opens the camera there). On web,
-  /// [defaultTargetPlatform] reports the underlying OS, so this needs no
-  /// kIsWeb branch. Desktop is false: the desktop implementations throw
-  /// unless a camera delegate is wired, which this package doesn't do.
+  /// input `capture` attribute; a browser hint that mobile browsers honor
+  /// by opening the camera, though a browser may offer a chooser instead).
+  /// On web, [defaultTargetPlatform] reports the underlying OS, so this
+  /// needs no kIsWeb branch.
+  ///
+  /// Desktop is false for two verified reasons, one per world: the desktop
+  /// NATIVE implementations throw a StateError unless a camera delegate is
+  /// wired (which this package doesn't do), and desktop BROWSERS ignore the
+  /// `capture` attribute entirely — the plugin would silently show a plain
+  /// file picker while the caller believes a camera opened. This gate
+  /// refuses first so that fake success can never happen.
   @override
   bool get isCameraSupported =>
       defaultTargetPlatform == TargetPlatform.iOS ||
