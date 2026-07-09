@@ -52,7 +52,8 @@ lib/
   device_io.dart               ← barrel: sectioned exports, quick-start doc
   src/
     runtime/{native,web}/ (world support)
-      native_fs.dart           ← dart:io helpers: sanitize / reserve / stage
+      native/fs.dart           ← dart:io helpers: sanitize / reserve / stage
+      web/dom_exception.dart   ← DOM error-name detection for web adapters
     opener/
       file_opener.dart         ← contract: openBytes / openPath
       native/  web/            ← OS-open + open_filex channel · blob-tab impl

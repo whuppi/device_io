@@ -99,7 +99,7 @@ void main() {
   group('reserveFreshFile', () {
     late Directory tmp;
     setUp(() async {
-      tmp = await Directory.systemTemp.createTemp('native_fs_reserve_');
+      tmp = await Directory.systemTemp.createTemp('device_io_fs_reserve_');
     });
     tearDown(() async {
       if (tmp.existsSync()) await tmp.delete(recursive: true);
@@ -158,7 +158,7 @@ void main() {
     late Directory stageRoot;
 
     setUp(() async {
-      stageRoot = await Directory.systemTemp.createTemp('native_fs_stage_');
+      stageRoot = await Directory.systemTemp.createTemp('device_io_fs_stage_');
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_pathProviderChannel, (call) async {
             if (call.method == 'getTemporaryDirectory') return stageRoot.path;

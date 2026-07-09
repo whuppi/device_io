@@ -88,7 +88,7 @@ When in doubt, read existing code in this repo and match it. Per-repo style cons
 
 **Expected failures are values, never throws.** Adapters return `Outcome`, capture stack traces into failures, and rethrow `Error`s so programmer bugs crash loudly. Never convert a programmer error into a `Failed`. Every `Unsupported` must be evidence-backed against plugin source, not assumed.
 
-**Filesystem writes go through `lib/src/runtime/{native,web}/native_fs.dart`** (sanitize / atomic reserve / stage). Never interpolate a caller-supplied fileName into a path directly.
+**Filesystem writes go through `lib/src/runtime/native/fs.dart`** (sanitize / atomic reserve / stage). Never interpolate a caller-supplied fileName into a path directly.
 
 **Pinned plugin behaviors and platform entitlements** are tabulated in `docs/UPDATING.md` — the open_filex channel protocol, `saveFile` bytes semantics, the permission-code list, and the macOS Downloads/user-selected entitlements a consumer app must declare. Re-verify on every dependency bump.
 
