@@ -28,7 +28,7 @@ Manual edits to this file will be overwritten on the next stamp.
 
 ## What this tool does
 
-**device_io** is a cross-platform device IO package for Flutter — pick images and files, share via the OS sheet, save silently or through the system save dialog, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web: apps never branch on platform. Every operation returns a sealed `PlatformResult` — `Success` / `Cancelled` / `Unsupported` / `Failed`, with `PermissionDenied` as a named failure carrying the caught error and stack trace. Four capability contracts (`AssetPicker`, `Sharer`, `FileSaver`, `FileOpener`) sit behind one `DeviceIO` container, constructed synchronously via `DeviceIO()`. Reads are lazy (`PickedAsset` loads nothing until asked); filesystem writes are browser-grade safe (name sanitization, atomic no-clobber numbering, `.part`-then-rename stream writes). pub.dev attributes all six platforms, guarded by the pana platform gate (`make platforms`).
+**device_io** is a cross-platform device IO package for Flutter — pick images and files, share via the OS sheet, save silently or through the system save dialog, open in the default viewer. One API on iOS, Android, macOS, Windows, Linux, and web: apps never branch on platform. Every operation returns a sealed `Outcome` — `Success` / `Cancelled` / `Unsupported` / `Failed`, with `PermissionDenied` as a named failure carrying the caught error and stack trace. Four capability contracts (`AssetPicker`, `Sharer`, `FileSaver`, `FileOpener`) sit behind one `DeviceIO` container, constructed synchronously via `DeviceIO()`. Reads are lazy (`PickedAsset` loads nothing until asked); filesystem writes are browser-grade safe (name sanitization, atomic no-clobber numbering, `.part`-then-rename stream writes). pub.dev attributes all six platforms, guarded by the pana platform gate (`make platforms`).
 
 This repo is one tool inside the **whuppi** workspace — a multi-tool monorepo. The workspace ships shared engineering standards, code conventions, brand identity, and build patterns that apply across every tool. They're documented in three layers:
 
@@ -86,13 +86,13 @@ When in doubt, read existing code in this repo and match it. Per-repo style cons
 
 **Two dependencies are registration-only — never import their Dart.** `share_plus` is reached through `share_plus_platform_interface`, and `open_filex` through its method channel — importing either package's own barrel drops desktop platforms from pub.dev attribution (their internals pin single-platform packages). The pubspec comments carry the reasoning; `make platforms` fails if this regresses.
 
-**Expected failures are values, never throws.** Adapters return `PlatformResult`, capture stack traces into failures, and rethrow `Error`s so programmer bugs crash loudly. Never convert a programmer error into a `PlatformFailed`. Every `PlatformUnsupported` must be evidence-backed against plugin source, not assumed.
+**Expected failures are values, never throws.** Adapters return `Outcome`, capture stack traces into failures, and rethrow `Error`s so programmer bugs crash loudly. Never convert a programmer error into a `Failed`. Every `Unsupported` must be evidence-backed against plugin source, not assumed.
 
-**Filesystem writes go through `lib/src/_shared/native_fs.dart`** (sanitize / atomic reserve / stage). Never interpolate a caller-supplied fileName into a path directly.
+**Filesystem writes go through `lib/src/runtime/native/fs.dart`** (sanitize / atomic reserve / stage). Never interpolate a caller-supplied fileName into a path directly.
 
 **Pinned plugin behaviors and platform entitlements** are tabulated in `docs/UPDATING.md` — the open_filex channel protocol, `saveFile` bytes semantics, the permission-code list, and the macOS Downloads/user-selected entitlements a consumer app must declare. Re-verify on every dependency bump.
 
-**Tests mirror `lib/src/` (VM) with the web adapters in real Chrome under `test/web_runners/`.** Every test file opens with a CHARTER stating what it alone proves; assertions are behavioral against declared truths, never liveness. Host-VM example journeys stay in memory (no `dart:io`); real filesystem effects live in the integration smoke.
+**Tests mirror `lib/src/` (VM); browser-bound suites are quarantined under `test/platform/web/` (the only tree `dart test -p chrome` compiles); the runtime/resolve layer is pinned in `test/runtime/`; the cross-adapter Outcome grammar lives as one spec in `test/batteries/`.** Every test file opens with a CHARTER stating what it alone proves; assertions are behavioral against declared truths, never liveness. Host-VM example journeys stay in memory (no `dart:io`); real filesystem effects live in the integration smoke.
 
 ---
 

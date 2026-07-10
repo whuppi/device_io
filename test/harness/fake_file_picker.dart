@@ -10,6 +10,8 @@
 //            compressionQuality}
 //   return   invokeListMethod → List<Map>? ; each Map → PlatformFile.fromMap
 //            (keys: name, path, bytes, size, identifier). null → cancelled.
+//   getDirectoryPath → channel method 'dir'; returns a String? path
+//            (null → cancelled).
 //
 // The fake RECORDS the invoked method + args and returns SCRIPTED file maps
 // (or null). Tests assert both, so a gutted adapter that dropped the
@@ -35,6 +37,14 @@ final class FakeFilePicker {
 
   // ── script ──
   List<Map<String, Object?>>? _files;
+  String? _dirPath;
+  bool _dirScripted = false;
+
+  /// Script getDirectoryPath returning this path (null → cancelled).
+  void returnDirectory(String? path) {
+    _dirPath = path;
+    _dirScripted = true;
+  }
 
   /// Script a successful pick returning these platform-file maps.
   void returnFiles(List<Map<String, Object?>> files) => _files = files;
@@ -47,6 +57,9 @@ final class FakeFilePicker {
         .setMockMethodCallHandler(_channel, (call) async {
           called = true;
           method = call.method;
+          if (call.method == 'dir') {
+            return _dirScripted ? _dirPath : null;
+          }
           final args = (call.arguments as Map).cast<Object?, Object?>();
           allowMultipleSelection = args['allowMultipleSelection'] as bool?;
           allowedExtensions = (args['allowedExtensions'] as List?)

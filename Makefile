@@ -89,10 +89,10 @@ lint-shell:
 #
 # make test-guards   Mechanical rules over the suite itself:
 #                    - package:web / dart:js_interop only under
-#                      test/web_runners/ (the VM suites must compile
+#                      test/platform/web/ (the VM suites must compile
 #                      without a browser target)
 #                    - dart:io outside the native-adapter suites
-#                      (test/_shared, test/saver, test/sharer,
+#                      (test/runtime, test/saver, test/sharer,
 #                      test/opener — their SUBJECTS wrap dart:io)
 #                      carries an 'io-exempt: <reason>' comment
 #                    - no direct plugin imports anywhere in test/ —
@@ -105,12 +105,12 @@ lint-shell:
 
 test-guards:
 	@bad=$$(grep -rln "package:web/\|dart:js_interop" test/ --include="*.dart" \
-	  | grep -v "^test/web_runners/" || true); \
+	  | grep -v "^test/platform/web/" || true); \
 	if [ -n "$$bad" ]; then \
-	  echo "browser-only import outside test/web_runners/ — the VM suites"; \
+	  echo "browser-only import outside test/platform/web/ — the VM suites"; \
 	  echo "must compile without a browser target:"; \
 	  echo "$$bad"; exit 1; fi
-	@bad=$$(for f in $$(grep -rln "dart:io" test/types test/picker test/harness test/web_runners --include="*.dart" 2>/dev/null); do \
+	@bad=$$(for f in $$(grep -rln "dart:io" test/types test/runtime test/batteries test/picker test/harness test/platform/web --include="*.dart" 2>/dev/null); do \
 	  grep -q "io-exempt:" "$$f" || echo "$$f"; \
 	done); \
 	if [ -n "$$bad" ]; then \
@@ -139,9 +139,9 @@ test-guards:
 test: test-unit test-web
 
 test-unit:
-	@echo "=== Unit: VM (types + _shared + picker + native adapters) ==="
+	@echo "=== Unit: VM (types + runtime + batteries + picker + native adapters) ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/_shared test/picker test/saver test/sharer test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
+	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/runtime test/batteries test/picker test/saver test/sharer test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
 
 # Web suites run under `dart test -p chrome`, NOT flutter test: flutter test
 # boots CanvasKit, which hangs on Windows headless Chrome (flutter#162798).
@@ -160,7 +160,7 @@ test-web:
 	  chmod +x $(TEST_RESULTS_DIR)/chrome-ci; \
 	  export CHROME_EXECUTABLE="$$PWD/$(TEST_RESULTS_DIR)/chrome-ci"; \
 	fi; \
-	$(DART) test $(TIMEOUT) -p chrome test/web_runners --concurrency=1 --file-reporter json:$(TEST_RESULTS_DIR)/web.json
+	$(DART) test $(TIMEOUT) -p chrome test/platform/web --concurrency=1 --file-reporter json:$(TEST_RESULTS_DIR)/web.json
 
 # ═══════════════════════════════════════════════════════════════════
 # § 3b — Example tests

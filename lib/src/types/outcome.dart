@@ -4,11 +4,11 @@ import 'package:meta/meta.dart';
 /// platforms.
 ///
 /// Five outcomes:
-/// - [PlatformSuccess] — operation succeeded with a value
-/// - [PlatformCancelled] — the user dismissed the picker / share sheet
-/// - [PlatformUnsupported] — operation is not available on this platform
-/// - [PlatformFailed] — operation is supported but failed at runtime
-///   (with [PlatformPermissionDenied] as the named permission failure)
+/// - [Success] — operation succeeded with a value
+/// - [Cancelled] — the user dismissed the picker / share sheet
+/// - [Unsupported] — operation is not available on this platform
+/// - [Failed] — operation is supported but failed at runtime
+///   (with [PermissionDenied] as the named permission failure)
 ///
 /// Pattern-match with a `switch` for exhaustive handling. There are no
 /// helper getters on purpose — a sealed result consumed through escape
@@ -17,63 +17,63 @@ import 'package:meta/meta.dart';
 /// ```dart
 /// final result = await deviceIO.picker.pickImage();
 /// switch (result) {
-///   case PlatformSuccess(:final value): use(value);
-///   case PlatformCancelled(): break; // user changed their mind
-///   case PlatformPermissionDenied(): promptForSettings();
-///   case PlatformUnsupported(:final reason): hideFeature(reason);
-///   case PlatformFailed(:final message): showError(message);
+///   case Success(:final value): use(value);
+///   case Cancelled(): break; // user changed their mind
+///   case PermissionDenied(): promptForSettings();
+///   case Unsupported(:final reason): hideFeature(reason);
+///   case Failed(:final message): showError(message);
 /// }
 /// ```
 @immutable
-sealed class PlatformResult<T> {
+sealed class Outcome<T> {
   /// Const base constructor for the sealed subclasses.
-  const PlatformResult();
+  const Outcome();
 }
 
 /// Operation succeeded with a value.
-final class PlatformSuccess<T> extends PlatformResult<T> {
+final class Success<T> extends Outcome<T> {
   /// Creates a success result carrying [value].
-  const PlatformSuccess(this.value);
+  const Success(this.value);
 
   /// The operation's result value.
   final T value;
 
   @override
-  String toString() => 'PlatformSuccess($value)';
+  String toString() => 'Success($value)';
 }
 
 /// The user cancelled the operation — dismissed the picker, the camera,
 /// or the share sheet. A normal outcome, not an error.
-final class PlatformCancelled<T> extends PlatformResult<T> {
+final class Cancelled<T> extends Outcome<T> {
   /// Creates a cancelled result.
-  const PlatformCancelled();
+  const Cancelled();
 
   @override
-  String toString() => 'PlatformCancelled()';
+  String toString() => 'Cancelled()';
 }
 
 /// Operation is not supported on this platform.
-final class PlatformUnsupported<T> extends PlatformResult<T> {
+final class Unsupported<T> extends Outcome<T> {
   /// Creates an unsupported result explaining why in [reason].
-  const PlatformUnsupported(this.reason);
+  const Unsupported(this.reason);
 
   /// Human-readable explanation of why the operation is unavailable.
   final String reason;
 
   @override
-  String toString() => 'PlatformUnsupported($reason)';
+  String toString() => 'Unsupported($reason)';
 }
 
 /// Operation is supported but failed at runtime.
 ///
 /// Subtypes name the failures consumers branch on — currently
-/// [PlatformPermissionDenied]. A plain `case PlatformFailed()` arm matches
+/// [PermissionDenied]. A plain `case Failed()` arm matches
 /// the subtypes too, so generic handling stays a single arm; when a switch
-/// has BOTH arms, the [PlatformPermissionDenied] arm must come first.
-class PlatformFailed<T> extends PlatformResult<T> {
+/// has BOTH arms, the [PermissionDenied] arm must come first.
+class Failed<T> extends Outcome<T> {
   /// Creates a failure result with a [message], and the caught [error]
   /// plus its [stackTrace] when available.
-  const PlatformFailed(this.message, {this.error, this.stackTrace});
+  const Failed(this.message, {this.error, this.stackTrace});
 
   /// Human-readable description of the failure (diagnostic, not localized —
   /// apps translate for their users).
@@ -86,21 +86,21 @@ class PlatformFailed<T> extends PlatformResult<T> {
   final StackTrace? stackTrace;
 
   @override
-  String toString() => 'PlatformFailed($message)';
+  String toString() => 'Failed($message)';
 }
 
 /// The OS denied a required permission (camera, photo library, storage).
 ///
 /// The one failure worth branching on: the recovery is prompting the user
 /// toward system settings, not retrying.
-final class PlatformPermissionDenied<T> extends PlatformFailed<T> {
+final class PermissionDenied<T> extends Failed<T> {
   /// Creates a permission-denied failure.
-  const PlatformPermissionDenied({
+  const PermissionDenied({
     String message = 'Permission denied',
     Object? error,
     StackTrace? stackTrace,
   }) : super(message, error: error, stackTrace: stackTrace);
 
   @override
-  String toString() => 'PlatformPermissionDenied($message)';
+  String toString() => 'PermissionDenied($message)';
 }

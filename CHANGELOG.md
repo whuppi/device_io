@@ -12,14 +12,14 @@ Two INDEPENDENT lane changelogs — do NOT mirror one from the other:
 They share prose but track their OWN version sequences. There is no
 `cp + sed` regen: that mirror falsely assumed every prerelease becomes a
 same-numbered stable, so it manufactured stable headings for versions
-that never shipped — which the release tooling's --check-versions flags.
+that never shipped — which the release tooling's `--check-versions` flags.
 Hand-edit each lane's file directly.
 
 ADDING A VERSION
   Add a heading at the TOP (newest first) of the right lane's file and
   write the summary. Exactly ONE new (untagged) version may sit at the
   top of each file — every heading BELOW it must already have its git tag
-  (or a verified `release: no-tag` HTML-comment directive). --check-versions
+  (or a verified `release: no-tag` HTML-comment directive). `--check-versions`
   enforces this at PR + release time: a second un-released version is
   rejected, since it would collapse into the one release the merge cuts.
   Versions, commit lists, tags, publishing — the release tooling owns all
@@ -47,7 +47,7 @@ CONTENT RULES (never change)
     (pub.dev freezes each version's CHANGELOG as a snapshot, so an entry
     can't rely on anything that later moves.)
   • NEVER link a living doc (README, docs/*) from an entry — it rots when
-    the doc moves on. The migration guide is reached from the README.
+    the doc moves on.
   • Links point only at IMMUTABLE targets — a PR, commit, or issue:
     ([#N](https://github.com/whuppi/device_io/issues/N) reported by
     [@user](https://github.com/user), [PR #N](https://github.com/whuppi/device_io/pull/N)).
@@ -57,6 +57,25 @@ CONTENT RULES (never change)
     docs/CAPABILITY_ROADMAP.md; the changelog says only what CHANGED.
 ═══════════════════════════════════════════════════════════════════════
 -->
+
+<!-- Add new versions below, newest first. -->
+
+## 2.0.0
+
+- **Breaking:** the result family is renamed — `PlatformResult` → `Outcome`,
+  `PlatformSuccess` → `Success`, `PlatformCancelled` → `Cancelled`,
+  `PlatformUnsupported` → `Unsupported`, `PlatformFailure` → `Failed`,
+  `PlatformPermissionDenied` → `PermissionDenied`. Migration is a mechanical
+  find-and-replace of those six names; fields, semantics, and the sealed
+  hierarchy (PermissionDenied still subtypes Failed) are unchanged.
+- Added `AssetPicker.pickDirectory` — a directory chooser on the five native
+  platforms; `Unsupported` on web.
+- Added `FileSaver.saveInto` — silent save into a caller-chosen directory
+  (pairs with `pickDirectory` for pick-once-save-many), with the same
+  name-sanitizing and no-clobber guarantees as `save`; `Unsupported` on web.
+- Added `FileOpener.open(SaveLocation)` — opens what a save returned without
+  destructuring: `SavedAtPath` opens at its path, `SavedByBrowser` returns
+  `Unsupported`.
 
 ## 1.0.0
 

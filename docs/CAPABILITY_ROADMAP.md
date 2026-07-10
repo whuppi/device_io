@@ -4,6 +4,11 @@ Every capability the package offers or plans, with status. Nothing ships
 while an active row sits un-resolved. Statuses: **DONE** · **BUILDING** ·
 **PLANNED** · **WONT_DO** (with reason).
 
+Platform-honesty rule: a proposed capability that would be `Unsupported` on
+more platforms than it works on defaults to WONT_DO — the package's promise
+is cross-platform verbs, not native-only conveniences. A row may override
+the default only with an argued note.
+
 For the architecture see [`ARCHITECTURE.md`](ARCHITECTURE.md). For
 maintenance recipes see [`UPDATING.md`](UPDATING.md).
 
@@ -15,11 +20,13 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 |---|---|---|
 | Pick single image (gallery) | DONE | Lazy XFile-backed reads on every platform |
 | Pick multiple images (+ limit) | DONE | Empty selection = `Cancelled`, never an empty list |
-| Camera capture | DONE | Phones/tablets — native apps AND mobile browsers (capture attribute). Desktop is `Unsupported` (verified: desktop impls throw without a camera delegate) |
+| Camera capture | DONE | Phones/tablets — native apps AND mobile browsers (the `capture` input hint). Desktop is `Unsupported`, verified in both worlds: desktop native impls throw `StateError` without a camera delegate, and desktop browsers ignore the `capture` hint (the plugin would silently degrade to a file picker — the gate refuses first). Pinned in `UPDATING.md` |
 | Pick single / multiple files (+ extension filter) | DONE | Native lazy via cached path; web lazy via File System Access where present, otherwise file_picker's `readAsBytes` (single lazy; a multi-pick buffers up front) |
-| Permission mapping | DONE | Exact image_picker codes → `PlatformPermissionDenied`; file_picker's SAF needs none |
+| Permission mapping | DONE | Exact image_picker codes → `PermissionDenied`; file_picker's SAF needs none |
 | Pick video / mixed media | DONE | `pickVideo` / `captureVideo` / `pickMedia` / `pickMultipleMedia`, lazy like every pick; `maxDuration` honored for camera recording only (plugin behavior, documented); no permission codes exist beyond the four mapped (verified against plugin source) |
 | Lazy web file picks | DONE | `showOpenFilePicker` (Chromium) behind a stub-default conditional export; blob-backed handles read on demand; `withData` fallback on Firefox/Safari |
+| Pick a directory | DONE | `pickDirectory` — 5 native platforms; web returns `Unsupported` (browsers expose no directory paths). Overrides the platform-honesty default: it exists to feed `saveInto`, and the pair degrades cleanly to `saveAs` on web. Note: file_picker maps its own channel errors to null, so a protected-directory denial surfaces as `Cancelled` |
+| Drag-and-drop intake | WONT_DO | A UI-layer concern (a drop target is a widget); packages like desktop_drop own it. This package stays UI-free — a dropped file's bytes can already flow into `openBytes`/`share`/`save` |
 
 ## Sharing — `Sharer`
 
@@ -40,8 +47,10 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | Silent save (stream) | DONE | `.part`-then-rename; failed stream leaves nothing |
 | `saveAs` via system dialog | DONE | SAF (Android) / Files export (iOS) / native dialog (desktop) / File System Access with download fallback (web); `mimeType` feeds the fallback's blob type |
 | Web streaming `saveAs` writes | DONE | `FileSystemWritableFileStream` on Chromium |
+| `saveInto` a chosen directory | DONE | Silent bytes-save into a caller-supplied directory (pairs with `pickDirectory` for a pick-once-save-many flow); sanitized names + no-clobber numbering, same guarantees as `save`; web returns `Unsupported` |
+| Save/share progress callbacks | WONT_DO | Byte-level progress needs plugin-internal hooks none of the wrapped plugins expose. Callers who need progress can wrap their own byte stream (count chunks before handing it to `saveStream`) — the stream seam already makes this a 5-line caller recipe |
 | Silent save to PUBLIC storage on mobile | WONT_DO (for now) | Android-only gap (desktop/web `save` already land user-visible; iOS has no public Downloads at all) whose fix needs first-party MediaStore native code — an identity change from plugin-wrapper to plugin. `saveAs` is the user-visible mobile answer. Revisit if a consumer app needs background exports to public storage. |
-| Silent streaming saves on web | WONT_DO (for now) | A no-dialog streaming write needs a File System Access handle, which only user-initiated dialogs can produce; revisit if a handle-reuse API is added |
+| Silent streaming saves on web | WONT_DO (for now) | A no-dialog streaming write needs a File System Access handle; handles can be persisted (IndexedDB) but re-activating one still requires a user-gesture permission grant, so "silent" stays impossible. Revisit if the gesture requirement is relaxed |
 
 ## Opening — `FileOpener`
 
@@ -50,12 +59,14 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 | `openBytes` on every platform | DONE | Native: stage + OS open; web: blob URL in a new tab |
 | `openPath` (native) | DONE | Desktop via OS open commands (stderr surfaced on failure); mobile via open_filex's channel |
 | `openPath` on web | WONT_DO | Filesystem paths do not exist on web — `openBytes` is the web path |
+| `open(SaveLocation)` | DONE | Closes the save→open loop without caller destructuring: `SavedAtPath` opens at its path; `SavedByBrowser` is `Unsupported` (the browser owns downloads — no handle to reopen) |
+| Open a URI / deep link | WONT_DO | url_launcher owns URI opening and does it well; wrapping it adds a dependency without adding a guarantee |
 
 ## Cross-cutting
 
 | Capability | Status | Notes |
 |---|---|---|
-| Sealed `PlatformResult` with `Cancelled` + `PermissionDenied` | DONE | Stack traces captured on failures |
+| Sealed `Outcome` with `Cancelled` + `PermissionDenied` | DONE | Stack traces captured on failures |
 | Six-platform pub.dev attribution | DONE | pana-gated (`make platforms`); registration-only deps pattern |
 | MIME lookups (curated + full database) | DONE | package:mime behind the curated maps |
 | App permission requesting | WONT_DO | Apps own their permission UX and Info.plist/manifest entries; this package surfaces denials as typed results |
@@ -67,6 +78,8 @@ maintenance recipes see [`UPDATING.md`](UPDATING.md).
 |---|---|---|
 | Strict lints + zero-issue analyzer | DONE | |
 | Makefile gates (format / analyze / analyze-floor / platforms) | DONE | |
-| Test suite (mirror VM suites + real-Chrome web runners) | DONE | Chartered behavioral tests; recording fakes at platform-interface seams; instrumented JS surface in real Chrome; mechanical guards (`make test-guards`). Shape in `ARCHITECTURE.md` |
-| Example app | DONE | Six platforms, one exhaustive `PlatformResult` renderer, lazy reads on tap; the integration smoke test joins the test-suite rebuild |
-| CI via the shared workflow repo | DONE | First consumer of `whuppi/ci@v1.0.0`. Thin caller stubs over the reusable workflows; fast PR gate in `ci.yml` (format/analyze/floor/platforms/guards/unit/web via `make-target`); label-triggered cross-target matrix in `full-test.yml` (package × OS, host journeys, real-device integration smokes, release verify); release via the reusable gate → discover → publish workflow (no binaries). Shared-CI upgrades arrive as grouped Dependabot PRs, tested by that PR's own CI |
+| Test suite (mirror VM suites · runtime layer · grammar battery · real-Chrome quarantine) | DONE | Chartered behavioral tests; recording fakes at platform-interface seams; the runtime/resolve layer pinned in `test/runtime/`; the cross-adapter `Outcome` grammar as one spec in `test/batteries/`; browser charters under `test/platform/web/`; mechanical guards (`make test-guards`). Shape in `ARCHITECTURE.md` §8 |
+| Example app | DONE | Six platforms, one exhaustive `Outcome` renderer, lazy reads on tap; host journeys cover all four tabs (pick / share / save / open + cross-tab plumb); the integration smoke proves real filesystem effects on-device |
+| CI via the shared workflow repo | DONE | First consumer of `whuppi/ci` (born on v1.0.0; pinned per-workflow and bumped by grouped Dependabot PRs — currently v2.0.5). Thin caller stubs over the reusable workflows; fast PR gate in `ci.yml` (format/analyze/floor/platforms/guards/unit/web via `make-target`); label-triggered cross-target matrix in `full-test.yml` (package × OS, host journeys, real-device integration smokes, release verify); release via the reusable gate → discover → publish workflow (no binaries). Shared-CI upgrades arrive as grouped Dependabot PRs, tested by that PR's own CI |
+| Published to pub.dev | DONE | `1.0.0` stable live under the verified publisher (whuppi.com); 160/160 pana; two-lane changelogs drive the release train (prerelease from dev, stable from prod, env-gated publish approval) |
+| pub.dev listing | DONE | Novice-first description (≤180 chars, scored range), five searched topics, README banner (light/dark `<picture>`, flattened to `<img>` in the published tarball) |

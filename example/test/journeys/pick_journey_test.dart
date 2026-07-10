@@ -56,6 +56,8 @@ void main() {
     expect(find.textContaining('$declaredLength bytes'), findsNothing);
 
     // Reading happens on tap, and reports the declared length.
+    await tester.ensureVisible(find.text('shot.png'));
+    await settle(tester);
     await tester.tap(find.text('shot.png'));
     await settle(tester);
     expect(find.textContaining('$declaredLength bytes'), findsOneWidget);

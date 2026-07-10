@@ -51,7 +51,7 @@ The maintainer handles releases.
 
 - Match existing code in the repo.
 - **Expected failures are values, never throws.** Every adapter method
-  returns `PlatformResult` — `Supported` / `Cancelled` / `Unsupported` /
+  returns `Outcome` — `Supported` / `Cancelled` / `Unsupported` /
   `Failed` (+ `PermissionDenied`). Catches capture the stack trace into
   the result and rethrow `Error`s so programmer bugs crash loudly.
 - **The stub-default conditional import in `lib/src/runtime/` is
@@ -64,14 +64,14 @@ The maintainer handles releases.
   platforms from pub.dev attribution (their internals pin
   single-platform packages). The pubspec comments carry the reasoning;
   `make platforms` fails if this regresses.
-- **No `dart:io` outside `lib/src/_shared/` and the `native/` adapter
+- **No `dart:io` outside `lib/src/runtime/{native,web}/` and the `native/` adapter
   folders.** Shared interfaces and types stay platform-neutral.
-- **Every impossibility claim needs evidence.** A `PlatformUnsupported`
+- **Every impossibility claim needs evidence.** A `Unsupported`
   return must be backed by verified platform/plugin behavior, not
   convenience — check the claim against the plugin sources before
   writing it.
 - Tests mirror `lib/src/` (VM) with the web adapters exercised in real
-  Chrome under `test/web_runners/`. Every test file opens with a CHARTER
+  Chrome under `test/platform/web/`. Every test file opens with a CHARTER
   stating what it alone proves; assertions are behavioral against
   declared truths, never liveness. Read the test-architecture section in
   [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before adding tests.

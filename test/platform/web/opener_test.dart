@@ -3,19 +3,19 @@
 // calls window.open with a `blob:` URL and the '_blank' target and, when the
 // returned window is non-null, maps to Success(null); when window.open returns
 // null (popup blocked), it revokes the URL and returns the documented
-// PlatformFailed; openPath is always Unsupported on web (no override needed).
+// Failed; openPath is always Unsupported on web (no override needed).
 // Diet: declared byte fixtures from ../harness/bytes.dart; inline literals here.
 @TestOn('browser')
 library;
 
 import 'dart:js_interop';
 
-import 'package:device_io/src/opener/web/web_file_opener.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/opener/web/file_opener.dart';
+import 'package:device_io/src/types/outcome.dart';
 import 'package:test/test.dart';
 
-import '../harness/bytes.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {
@@ -62,7 +62,7 @@ void main() {
       fileName: 'doc.pdf',
     );
 
-    expect(result, isA<PlatformSuccess<void>>());
+    expect(result, isA<Success<void>>());
     expect(openedUrl, 'blob:opener-fake');
     expect(openedTarget, '_blank');
   }, timeout: t(4));
@@ -76,8 +76,8 @@ void main() {
         fileName: 'doc.pdf',
       );
 
-      expect(result, isA<PlatformFailed<void>>());
-      expect((result as PlatformFailed<void>).message, contains('popup'));
+      expect(result, isA<Failed<void>>());
+      expect((result as Failed<void>).message, contains('popup'));
       expect(openedTarget, '_blank'); // it did attempt the open
     },
     timeout: t(4),
@@ -85,6 +85,6 @@ void main() {
 
   test('openPath is always Unsupported on web', () async {
     final result = await adapter.openPath(filePath: '/tmp/whatever.pdf');
-    expect(result, isA<PlatformUnsupported<void>>());
+    expect(result, isA<Unsupported<void>>());
   }, timeout: t(3));
 }

@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:device_io/src/sharer/share_file.dart';
 import 'package:device_io/src/sharer/share_origin.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Platform-agnostic data sharing via OS share sheet.
 ///
@@ -34,12 +34,12 @@ import 'package:device_io/src/types/platform_result.dart';
 /// - `NativeSharer` — wraps share_plus (mobile/desktop)
 /// - `WebSharer` — Web Share API (web)
 ///
-/// A dismissed share sheet returns [PlatformCancelled].
+/// A dismissed share sheet returns [Cancelled].
 abstract interface class Sharer {
   /// Share text content via OS share sheet.
   ///
   /// See the class doc for [sharePositionOrigin].
-  Future<PlatformResult<void>> shareText({
+  Future<Outcome<void>> shareText({
     required String text,
     String? subject,
     ShareOrigin? sharePositionOrigin,
@@ -48,7 +48,7 @@ abstract interface class Sharer {
   /// Share a file (from bytes) via OS share sheet.
   ///
   /// See the class doc for [sharePositionOrigin].
-  Future<PlatformResult<void>> shareFile({
+  Future<Outcome<void>> shareFile({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -63,7 +63,7 @@ abstract interface class Sharer {
   /// nothing in it is a caller bug, not a runtime condition.
   ///
   /// See the class doc for [sharePositionOrigin].
-  Future<PlatformResult<void>> shareFiles({
+  Future<Outcome<void>> shareFiles({
     required List<ShareFile> files,
     String? subject,
     String? text,
@@ -77,7 +77,7 @@ abstract interface class Sharer {
   /// the Web Share API needs the full content up front.
   ///
   /// See the class doc for [sharePositionOrigin].
-  Future<PlatformResult<void>> shareFileStream({
+  Future<Outcome<void>> shareFileStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,

@@ -25,6 +25,7 @@ dev_dependencies:
   # the same discipline as the package suite (never import a plugin's
   # own Dart in a test).
   plugin_platform_interface: ^2.1.8
+  share_plus_platform_interface: ^7.1.0
   image_picker_platform_interface: ^2.11.0
   path_provider_platform_interface: ^2.1.2
 

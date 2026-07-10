@@ -15,10 +15,10 @@
 /// // Pick an image:
 /// final result = await deviceIO.picker.pickImage();
 /// switch (result) {
-///   case PlatformSuccess(:final value): use(value);
-///   case PlatformCancelled(): break;
-///   case PlatformUnsupported(:final reason): hideFeature(reason);
-///   case PlatformFailed(:final message): showError(message);
+///   case Success(:final value): use(value);
+///   case Cancelled(): break;
+///   case Unsupported(:final reason): hideFeature(reason);
+///   case Failed(:final message): showError(message);
 /// }
 ///
 /// // Share a file:
@@ -26,7 +26,7 @@
 ///
 /// // Save to downloads, then open what was saved:
 /// final saved = await deviceIO.saver.save(bytes: bytes, fileName: 'a.csv');
-/// if (saved case PlatformSuccess(value: SavedAtPath(:final path))) {
+/// if (saved case Success(value: SavedAtPath(:final path))) {
 ///   await deviceIO.opener.openPath(filePath: path);
 /// }
 ///
@@ -51,7 +51,7 @@ export 'src/sharer/share_origin.dart' show ShareOrigin;
 export 'src/sharer/sharer.dart' show Sharer;
 
 // ── Results — sealed; pattern-match on the variants ──────────────────
-export 'src/types/platform_result.dart';
+export 'src/types/outcome.dart';
 
 // ── Picked assets ────────────────────────────────────────────────────
 export 'src/picker/picked_asset.dart' show PickedAsset;

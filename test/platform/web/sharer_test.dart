@@ -17,13 +17,13 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
 import 'package:device_io/src/sharer/share_file.dart';
-import 'package:device_io/src/sharer/web/web_sharer.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/sharer/web/sharer.dart';
+import 'package:device_io/src/types/outcome.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
 
-import '../harness/bytes.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {
@@ -76,7 +76,7 @@ void main() {
         subject: 'the title',
       );
 
-      expect(result, isA<PlatformSuccess<void>>());
+      expect(result, isA<Success<void>>());
       expect(recorded, isNotNull);
       expect(readString(recorded! as JSObject, 'title'), 'the title');
       expect(readString(recorded! as JSObject, 'text'), 'hello body');
@@ -98,7 +98,7 @@ void main() {
         subject: 'two files',
       );
 
-      expect(result, isA<PlatformSuccess<void>>());
+      expect(result, isA<Success<void>>());
       final files = (recorded! as JSObject)
           .getProperty<JSArray<web.File>>('files'.toJS)
           .toDart;
@@ -124,7 +124,7 @@ void main() {
       text: 'see attached',
     );
 
-    expect(result, isA<PlatformSuccess<void>>());
+    expect(result, isA<Success<void>>());
     final files = (recorded! as JSObject)
         .getProperty<JSArray<web.File>>('files'.toJS)
         .toDart;
@@ -139,27 +139,27 @@ void main() {
   test('share() AbortError → Cancelled', () async {
     installShare(rejectWith: domException('AbortError'));
     final result = await adapter.shareText(text: 'x');
-    expect(result, isA<PlatformCancelled<void>>());
+    expect(result, isA<Cancelled<void>>());
   }, timeout: t(4));
 
   test('share() NotAllowedError → PermissionDenied', () async {
     installShare(rejectWith: domException('NotAllowedError'));
     final result = await adapter.shareText(text: 'x');
-    expect(result, isA<PlatformPermissionDenied<void>>());
+    expect(result, isA<PermissionDenied<void>>());
   }, timeout: t(4));
 
   test('share() NotSupportedError → Unsupported', () async {
     installShare(rejectWith: domException('NotSupportedError'));
     final result = await adapter.shareText(text: 'x');
-    expect(result, isA<PlatformUnsupported<void>>());
+    expect(result, isA<Unsupported<void>>());
   }, timeout: t(4));
 
   test('share() unlisted DOMException → Failed', () async {
     installShare(rejectWith: domException('DataError'));
     final result = await adapter.shareText(text: 'x');
-    expect(result, isA<PlatformFailed<void>>());
+    expect(result, isA<Failed<void>>());
     // Not the PermissionDenied subtype — a plain Failed.
-    expect(result, isNot(isA<PlatformPermissionDenied<void>>()));
+    expect(result, isNot(isA<PermissionDenied<void>>()));
   }, timeout: t(4));
 
   // ── feature detection: share absent → Unsupported ──
@@ -167,7 +167,7 @@ void main() {
   test('shareText with navigator.share absent → Unsupported', () async {
     overrides.add(PropOverride.remove(navigatorObj, 'share'));
     final result = await adapter.shareText(text: 'x');
-    expect(result, isA<PlatformUnsupported<void>>());
+    expect(result, isA<Unsupported<void>>());
   }, timeout: t(4));
 
   // ── shareFiles([]) throws before any JS ──
@@ -203,7 +203,7 @@ void main() {
         fileName: 'clip.mp4',
       );
 
-      expect(result, isA<PlatformSuccess<void>>());
+      expect(result, isA<Success<void>>());
       final files = (recorded! as JSObject)
           .getProperty<JSArray<web.File>>('files'.toJS)
           .toDart;

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/saver/save_location.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Platform-agnostic file opening in the default viewer.
 ///
@@ -14,7 +15,7 @@ import 'package:device_io/src/types/platform_result.dart';
 /// // Open what save just wrote (native only):
 /// final saved = await deviceIO.saver.save(
 ///   bytes: bytes, fileName: 'report.pdf');
-/// if (saved case PlatformSuccess(value: SavedAtPath(:final path))) {
+/// if (saved case Success(value: SavedAtPath(:final path))) {
 ///   await deviceIO.opener.openPath(filePath: path);
 /// }
 /// ```
@@ -31,7 +32,7 @@ abstract interface class FileOpener {
   ///
   /// [mimeType] helps the platform pick the right viewer; when omitted it
   /// is inferred from [fileName]'s extension.
-  Future<PlatformResult<void>> openBytes({
+  Future<Outcome<void>> openBytes({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -43,11 +44,16 @@ abstract interface class FileOpener {
   /// open what was just saved without re-reading it.
   ///
   /// [mimeType] is optional — the OS infers the app from the file extension.
-  /// Returns [PlatformUnsupported] on web (no filesystem paths exist there;
+  /// Returns [Unsupported] on web (no filesystem paths exist there;
   /// use [openBytes] instead).
-  /// Returns [PlatformFailed] if the file doesn't exist or can't be opened.
-  Future<PlatformResult<void>> openPath({
-    required String filePath,
-    String? mimeType,
-  });
+  /// Returns [Failed] if the file doesn't exist or can't be opened.
+  Future<Outcome<void>> openPath({required String filePath, String? mimeType});
+
+  /// Open the file a `FileSaver.save`/`saveInto` call produced, closing the
+  /// save→open loop without the caller destructuring the location.
+  ///
+  /// A [SavedAtPath] opens at its path (native, zero-copy). A [SavedByBrowser]
+  /// download can't be reached back — the browser owns that file — so it
+  /// returns [Unsupported].
+  Future<Outcome<void>> open(SaveLocation location, {String? mimeType});
 }

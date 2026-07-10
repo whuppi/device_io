@@ -19,12 +19,12 @@ import 'dart:typed_data';
 
 import 'package:device_io/src/picker/picked_asset.dart';
 import 'package:device_io/src/picker/web_file_pick.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
 
-import '../harness/bytes.dart';
-import '../harness/timeouts.dart';
+import '../../harness/bytes.dart';
+import '../../harness/timeouts.dart';
 import 'js_overrides.dart';
 
 void main() {
@@ -100,8 +100,8 @@ void main() {
       ]);
 
       final result = await lazyWebFilePick(allowMultiple: false);
-      expect(result, isA<PlatformSuccess<List<PickedAsset>>>());
-      final assets = (result! as PlatformSuccess<List<PickedAsset>>).value;
+      expect(result, isA<Success<List<PickedAsset>>>());
+      final assets = (result! as Success<List<PickedAsset>>).value;
       expect(assets.length, 1);
 
       final asset = assets.first;
@@ -132,7 +132,7 @@ void main() {
       fileHandle(bytes: utf8SampleBytes, name: 'note.txt', type: ''),
     ]);
     final result = await lazyWebFilePick(allowMultiple: false);
-    final assets = (result! as PlatformSuccess<List<PickedAsset>>).value;
+    final assets = (result! as Success<List<PickedAsset>>).value;
     expect(assets.single.mimeType, 'text/plain'); // inferred from '.txt'
   }, timeout: t(4));
 
@@ -196,7 +196,7 @@ void main() {
   test('AbortError rejection → Cancelled', () async {
     installReject(domException('AbortError'));
     final result = await lazyWebFilePick(allowMultiple: false);
-    expect(result, isA<PlatformCancelled<List<PickedAsset>>>());
+    expect(result, isA<Cancelled<List<PickedAsset>>>());
   }, timeout: t(4));
 
   test(
@@ -204,7 +204,7 @@ void main() {
     () async {
       installReject(domException('NotAllowedError'));
       final result = await lazyWebFilePick(allowMultiple: false);
-      expect(result, isA<PlatformFailed<List<PickedAsset>>>());
+      expect(result, isA<Failed<List<PickedAsset>>>());
       expect(result, isNotNull);
     },
     timeout: t(4),

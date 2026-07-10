@@ -6,7 +6,8 @@ import 'package:web/web.dart' as web;
 
 import 'package:device_io/src/opener/file_opener.dart';
 import 'package:device_io/src/types/mime_types.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/saver/save_location.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Web file opener — blob URL in a new tab.
 ///
@@ -14,7 +15,7 @@ import 'package:device_io/src/types/platform_result.dart';
 /// in the new tab; anything the browser can't display downloads instead.
 final class WebFileOpener implements FileOpener {
   @override
-  Future<PlatformResult<void>> openBytes({
+  Future<Outcome<void>> openBytes({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -29,7 +30,7 @@ final class WebFileOpener implements FileOpener {
       final opened = web.window.open(url, '_blank');
       if (opened == null) {
         web.URL.revokeObjectURL(url);
-        return const PlatformFailed(
+        return const Failed(
           'The browser blocked opening a new tab (popup blocker)',
         );
       }
@@ -43,24 +44,27 @@ final class WebFileOpener implements FileOpener {
           () => web.URL.revokeObjectURL(url),
         ),
       );
-      return const PlatformSuccess(null);
+      return const Success(null);
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
-      return PlatformFailed(
-        'Failed to open "$fileName"',
-        error: e,
-        stackTrace: st,
-      );
+      return Failed('Failed to open "$fileName"', error: e, stackTrace: st);
     }
   }
 
   @override
-  Future<PlatformResult<void>> openPath({
+  Future<Outcome<void>> openPath({
     required String filePath,
     String? mimeType,
   }) async {
-    return const PlatformUnsupported(
+    return const Unsupported(
       'Filesystem paths do not exist on web — use openBytes instead',
     );
+  }
+
+  @override
+  Future<Outcome<void>> open(SaveLocation location, {String? mimeType}) async {
+    // Web saves return SavedByBrowser (a download the browser owns) — no
+    // handle to reopen. openBytes is the web way to open content.
+    return const Unsupported('Reopening a saved file is not available on web');
   }
 }

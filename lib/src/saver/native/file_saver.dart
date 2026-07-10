@@ -4,10 +4,10 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'package:device_io/src/_shared/native_fs.dart';
+import 'package:device_io/src/runtime/native/fs.dart';
 import 'package:device_io/src/saver/file_saver.dart';
 import 'package:device_io/src/saver/save_location.dart';
-import 'package:device_io/src/types/platform_result.dart';
+import 'package:device_io/src/types/outcome.dart';
 
 /// Native (mobile/desktop) file saver.
 ///
@@ -26,7 +26,7 @@ final class NativeFileSaver implements FileSaver {
   // ── Silent saves — downloads directory ──
 
   @override
-  Future<PlatformResult<SaveLocation>> save({
+  Future<Outcome<SaveLocation>> save({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -41,11 +41,34 @@ final class NativeFileSaver implements FileSaver {
         await _deleteQuietly(file);
         rethrow;
       }
-      return PlatformSuccess(SavedAtPath(file.path));
+      return Success(SavedAtPath(file.path));
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
-      return PlatformFailed(
-        'Failed to save "$fileName"',
+      return Failed('Failed to save "$fileName"', error: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Outcome<SaveLocation>> saveInto({
+    required String directory,
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    try {
+      final dir = Directory(directory);
+      final file = await reserveFreshFile(dir, sanitizeFileName(fileName));
+      try {
+        await file.writeAsBytes(bytes, flush: true);
+      } catch (_) {
+        await _deleteQuietly(file);
+        rethrow;
+      }
+      return Success(SavedAtPath(file.path));
+    } catch (e, st) {
+      if (e is Error) rethrow;
+      return Failed(
+        'Failed to save "$fileName" into "$directory"',
         error: e,
         stackTrace: st,
       );
@@ -53,7 +76,7 @@ final class NativeFileSaver implements FileSaver {
   }
 
   @override
-  Future<PlatformResult<SaveLocation>> saveStream({
+  Future<Outcome<SaveLocation>> saveStream({
     required Stream<List<int>> byteStream,
     required String fileName,
     String? mimeType,
@@ -81,21 +104,17 @@ final class NativeFileSaver implements FileSaver {
         await _deleteQuietly(file);
         rethrow;
       }
-      return PlatformSuccess(SavedAtPath(file.path));
+      return Success(SavedAtPath(file.path));
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed(
-        'Failed to save "$fileName"',
-        error: e,
-        stackTrace: st,
-      );
+      return Failed('Failed to save "$fileName"', error: e, stackTrace: st);
     }
   }
 
   // ── User-visible save — system dialog ──
 
   @override
-  Future<PlatformResult<SaveLocation>> saveAs({
+  Future<Outcome<SaveLocation>> saveAs({
     required Uint8List bytes,
     required String fileName,
     String? dialogTitle,
@@ -111,16 +130,12 @@ final class NativeFileSaver implements FileSaver {
         bytes: bytes,
       );
       if (path == null) {
-        return const PlatformCancelled();
+        return const Cancelled();
       }
-      return PlatformSuccess(SavedAtPath(path));
+      return Success(SavedAtPath(path));
     } catch (e, st) {
       if (e is Error) rethrow;
-      return PlatformFailed(
-        'Failed to save "$fileName"',
-        error: e,
-        stackTrace: st,
-      );
+      return Failed('Failed to save "$fileName"', error: e, stackTrace: st);
     }
   }
 
