@@ -155,7 +155,7 @@ if (picked case Success(value: final asset)) {
 }
 ```
 
-That's the shape of every call: ask a capability, get a `Outcome`, match the outcome you care about. `pickImage`, `shareFile`, `save`, `openBytes` — same shape, a different verb.
+That's the shape of every call: ask a capability, get an `Outcome`, match the outcome you care about. `pickImage`, `shareFile`, `save`, `openBytes` — same shape, a different verb.
 
 The `if (... case ...)` above handles just the happy path. To react to *every* outcome, `switch` over the sealed result and let the compiler check each arm (see [Results](#results)).
 
