@@ -49,7 +49,6 @@ Every call returns a typed result instead of throwing. A cancelled picker, an un
 - [Error handling](#error-handling)
 - [Platform support](#platform-support)
   - [Where saves land](#where-saves-land)
-  - [Browser support](#browser-support)
 - [Not in the box](#not-in-the-box)
 - [Docs](#docs)
 
@@ -437,6 +436,11 @@ Permission denials arrive as `PermissionDenied` (a `Failed` subtype, see [Result
 
 One API, six targets. The matrix below is per **method**, and every cell is a typed answer:
 
+<details>
+<summary><b>🧰 the per-method matrix — all six platforms</b></summary>
+
+<br>
+
 - ✅ **works** — same call, same result shape
 - ⚠️ **works, with a platform nuance** — see the matching note
 - ❌ **returns `Unsupported`** — a typed result your code can branch on, never a crash or a silent no-op; its note says why and what to use instead
@@ -464,6 +468,8 @@ One API, six targets. The matrix below is per **method**, and every cell is a ty
 8. Browsers don't expose directory paths, so there's no folder to pick or save into. The web equivalent of the pick-once-save-many flow is `saveAs` per file.
 9. Filesystem paths don't exist on web, and a downloaded file belongs to the browser (no handle to reopen). `openBytes` is the web way to put content on screen.
 
+</details>
+
 The rule behind every ❌ and ⚠️: **the package never guesses.** Where a platform can't do something you get a typed `Unsupported` to branch on — hide the button, or take the note's fallback. Your app never writes `kIsWeb`.
 
 <details>
@@ -488,6 +494,11 @@ How the six-platform guarantee holds under the hood is in [Architecture](docs/AR
 
 The two save doors resolve differently per platform:
 
+<details>
+<summary><b>🧰 the save-destination table</b></summary>
+
+<br>
+
 | | `save` (silent) | `saveAs` (user picks) |
 |---|---|---|
 | **Desktop** | Real Downloads folder | Native save dialog |
@@ -499,15 +510,27 @@ On web, the Chromium save dialog comes from the File System Access API, writing 
 
 `saveInto` writes to whatever directory you hand it — typically one from `pickDirectory` — so it lands wherever the user chose. Both are native-only (`Unsupported` on web).
 
-### Which browsers?
+</details>
+
+<details>
+<summary><b>🧩 which browsers?</b></summary>
+
+<br>
 
 All of them — you don't pick a minimum browser, and you don't check one either. Every call looks at what the user's browser can actually do **at that moment** and takes the best route it finds: Chrome gets the nicer paths (a real save dialog, files read only when needed), Firefox and Safari get the simpler ones (a plain download, files read up front). That's all the ⚠️ web notes in the matrix are. Your code sees the same `Outcome` either way.
+
+</details>
 
 ---
 
 ## Not in the box
 
 What the shipped package doesn't do, and what to reach for meanwhile. For the full per-capability status, see the [capability roadmap](docs/CAPABILITY_ROADMAP.md).
+
+<details>
+<summary><b>🧩 the full list — what's missing, why, and what to reach for</b></summary>
+
+<br>
 
 - **Silent saves to *public* storage on mobile.** `save` on a phone writes to app-private storage (see [Save](#save)). Landing in public Downloads silently needs first-party MediaStore code, which this package skips ([roadmap](docs/CAPABILITY_ROADMAP.md) has the reasoning). `saveAs` is the answer: public storage, system dialog, no permissions. Need background exports? [Open an issue](https://github.com/whuppi/device_io/issues).
 - **Requesting permissions.** This package *surfaces* denials as `PermissionDenied`; it doesn't pop the permission prompt or manage the flow. Apps own their permission UX and their Info.plist / manifest entries. For an explicit request-and-check flow, use [`permission_handler`](https://pub.dev/packages/permission_handler).
@@ -517,6 +540,8 @@ What the shipped package doesn't do, and what to reach for meanwhile. For the fu
 - **Progress callbacks.** None of the wrapped plugins expose byte-level progress hooks. If you need one for a big save, count chunks in your own stream before handing it to `saveStream` — the stream seam makes that a five-line wrapper on the caller's side.
 - **Opening URLs.** `open*` is for files/bytes, not links. [`url_launcher`](https://pub.dev/packages/url_launcher) owns URI opening; wrapping it here would add a dependency without adding a guarantee.
 - **Storing your app's own files.** Every door here moves files between your app and the **user** (their picker, their share sheet, their Downloads). Files your app keeps for itself — caches, user content, databases of blobs — belong in a storage engine: [`cellar_flutter`](https://pub.dev/packages/cellar_flutter) gives you a ready-made one on the same six platforms (scoping, encryption seam, streaming, atomic writes). Save here when the user should see the file; store there when they shouldn't.
+
+</details>
 
 ---
 
