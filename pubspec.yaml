@@ -39,7 +39,7 @@ dependencies:
   # them. A caret could drop a beta that removes them into device_io AND every
   # consumer unbidden. Bump this line deliberately per beta; switch to ^12.0.0
   # when 12 ships stable (migrating off the deprecated params first).
-  file_picker: 12.0.0-beta.7
+  file_picker: 12.0.0
 
   # OS share sheet — REGISTRATION ONLY: code imports go through the
   # platform interface below, because this barrel's desktop impls pin
