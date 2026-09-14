@@ -47,6 +47,17 @@ the fix. iOS needs the three usage-description keys.
    flutter_test's `test_api` pin; it moves with Flutter bumps.
 4. `make check`.
 
+## Adding a MIME type / extension mapping
+
+The curated MIME↔extension table (`mimeToExtension` / `extensionToMime`,
+re-exported by `lib/src/types/mime_types.dart`) lives in `virtual_file_store`, not
+here — it's the workspace's one canonical copy, shared with pure-Dart code
+that cannot depend on this Flutter plugin package. Add the entry in
+`virtual_file_store/lib/src/mime/mime_types.dart` (see `virtual_file_store/docs/UPDATING.md`),
+then add the extension to this package's category sets
+([imageExtensions], [audioExtensions], etc. — still local, for UI icon
+selection) if it belongs to one.
+
 ## Adding a method to an existing capability
 
 1. Add it to the contract (`<concern>/<contract>.dart`) with the
@@ -77,6 +88,58 @@ the fix. iOS needs the three usage-description keys.
    imports BEFORE importing it; the registration-only pattern exists for
    plugins that poison the walk).
 6. Roadmap section + changelog entry.
+
+## Adding a method to the links channel
+
+The links door has three halves and one contract. A new method touches:
+
+1. `lib/src/links/links_channel.dart` — the typed Dart call, its payload
+   keys, and the error codes it may raise, in the class doc.
+2. `android/src/main/kotlin/com/whuppi/device_io/DeviceIoPlugin.kt` —
+   the `when (call.method)` arm. Map every exception to one of the
+   documented codes; never let a raw Kotlin message become the contract.
+3. `darwin/device_io/Sources/device_io/DeviceIoPlugin.swift` — the
+   `switch call.method` case, same codes.
+4. `lib/src/links/native/file_links.dart` — the world that uses it, and
+   the `_failure` mapping if a new code appears.
+5. `test/links/native_file_links_android_test.dart` — script the fake
+   channel (`_Channel`) for the new method; the paths and web worlds have
+   their own suites.
+
+## Adding a method to `FolderIo`
+
+`FolderIo`'s `path:` and `bookmark:` worlds open NO channel calls of
+their own beyond what the folder token already means: a `path:` token
+reads `dart:io` directly, and a `bookmark:` token is opened at the
+FOLDER itself through the SAME `LinksChannel.open` a file's `open` uses
+(no `relative`). The `folder-tree:` world (Android) has no local root at
+all — every call crosses the channel, and the Kotlin side resolves the
+relative path through Storage Access Framework document lookups — so a
+new method on this door usually DOES touch Kotlin, unless it can be
+built entirely from a resolved local root.
+
+1. `lib/src/links/folder_io.dart` — the contract method, with the
+   relative-path validation it inherits (`_validate`'s two rules: no
+   leading `/`, no `..` segment) named in the doc comment. Name the
+   platform difference (atomic on `path:`/`bookmark:`, not on
+   `folder-tree:`) if the method writes.
+2. `lib/src/links/native/folder_io.dart` — implement inside `_dispatch`'s
+   `onRoot` callback for the `path:`/`bookmark:` worlds; implement inside
+   `onTree` for Android, calling the matching `LinksChannel` method.
+3. `lib/src/links/web/folder_io.dart` — `Unsupported`; there is no
+   folder-grant world on the web to add a real implementation to.
+4. If the method needs a channel call Android doesn't already serve
+   (`folderRead` / `folderWrite` / `folderList` / `folderDelete`), that
+   IS a new channel method — follow "Adding a method to the links
+   channel" above instead, and only then wire it into `onTree`.
+5. `test/links/native_folder_io_paths_test.dart` covers the `path:`
+   world against real temp-directory files; `native_folder_io_darwin_test.dart`
+   scripts the same `_Channel` fake as the file-links darwin suite,
+   asserting `opens`/`closes` stay paired for the new method too;
+   `native_folder_io_android_test.dart` scripts a channel fake asserting
+   the method name and the `tree` / relative-path arguments crossed
+   correctly, plus that the path refusal never reaches the channel;
+   `web_folder_io_test.dart` asserts the `Unsupported`.
 
 ## Releasing
 

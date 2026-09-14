@@ -330,6 +330,7 @@ final class PluginAssetPicker implements AssetPicker {
     return PickedAsset.lazy(
       mimeType: mimeTypeFromFileName(file.name),
       fileName: file.name,
+      sizeBytes: file.size,
       readBytes: file.readAsBytes,
       readStream: file.readAsByteStream,
     );

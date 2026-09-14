@@ -8,6 +8,8 @@
 // surface plus the src impl types; no plugin edges are touched, so no fakes.
 
 import 'package:device_io/device_io.dart';
+import 'package:device_io/src/links/native/file_links.dart';
+import 'package:device_io/src/links/native/folder_io.dart';
 import 'package:device_io/src/opener/native/file_opener.dart';
 import 'package:device_io/src/picker/plugin_asset_picker.dart';
 import 'package:device_io/src/saver/native/file_saver.dart';
@@ -42,6 +44,18 @@ final class _StubOpener implements FileOpener {
       throw UnimplementedError('wiring-only stub');
 }
 
+final class _StubLinks implements FileLinks {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('wiring-only stub');
+}
+
+final class _StubFolders implements FolderIo {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('wiring-only stub');
+}
+
 void main() {
   group('DeviceIO() — native resolution', () {
     test('resolves the full native capability set', () {
@@ -49,6 +63,8 @@ void main() {
       expect(io.picker, isA<PluginAssetPicker>());
       expect(io.sharer, isA<NativeSharer>());
       expect(io.saver, isA<NativeFileSaver>());
+      expect(io.links, isA<NativeFileLinks>());
+      expect(io.folders, isA<NativeFolderIo>());
       expect(io.opener, isA<NativeFileOpener>());
     }, timeout: t(3));
 
@@ -79,16 +95,22 @@ void main() {
       final sharer = _StubSharer();
       final saver = _StubSaver();
       final opener = _StubOpener();
+      final links = _StubLinks();
+      final folders = _StubFolders();
       final io = DeviceIO.custom(
         picker: picker,
         sharer: sharer,
         saver: saver,
         opener: opener,
+        links: links,
+        folders: folders,
       );
       expect(identical(io.picker, picker), isTrue);
       expect(identical(io.sharer, sharer), isTrue);
       expect(identical(io.saver, saver), isTrue);
       expect(identical(io.opener, opener), isTrue);
+      expect(identical(io.links, links), isTrue);
+      expect(identical(io.folders, folders), isTrue);
     }, timeout: t(3));
   });
 }

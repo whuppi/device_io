@@ -32,6 +32,18 @@
 ///
 /// // Open in the default viewer (all platforms):
 /// await deviceIO.opener.openBytes(bytes: bytes, fileName: 'doc.pdf');
+///
+/// // Keep a large file where it is instead of copying it:
+/// final picked = await deviceIO.links.pickFiles(allowedExtensions: ['gguf']);
+/// if (picked case Success(value: [final candidate, ...])) {
+///   final linked = await deviceIO.links.link(candidate); // when durable
+/// }
+///
+/// // Read, write, list, and delete objects inside a linked folder:
+/// final folder = await deviceIO.links.pickFolder();
+/// if (folder case Success(:final value)) {
+///   await deviceIO.folders.write(value, 'manifest.json', bytes);
+/// }
 /// ```
 library;
 
@@ -50,8 +62,29 @@ export 'src/sharer/share_file.dart' show ShareFile;
 export 'src/sharer/share_origin.dart' show ShareOrigin;
 export 'src/sharer/sharer.dart' show Sharer;
 
+// ── Links — keep files where they are ────────────────────────────────
+export 'src/links/file_handle.dart'
+    show FileHandle, FilePathHandle, FileDescriptorHandle;
+export 'src/links/file_links.dart' show FileLinks;
+export 'src/links/file_ref.dart' show FileRef, FolderRef;
+export 'src/links/folder_io.dart' show FolderIo;
+export 'src/links/link_budget.dart' show LinkBudget;
+export 'src/links/link_candidate.dart' show LinkCandidate;
+export 'src/links/link_failures.dart'
+    show
+        LinkTargetMissing,
+        LinkNotDownloaded,
+        LinkPermissionGone,
+        LinkBudgetFull,
+        LinkNotDurable,
+        LinkReadError;
+export 'src/links/link_strength.dart' show LinkStrength;
+
 // ── Results — sealed; pattern-match on the variants ──────────────────
 export 'src/types/outcome.dart';
+
+// ── Plugin registrant for Linux / Windows (called by generated code) ──
+export 'src/registrants/device_io_desktop.dart' show DeviceIoDesktop;
 
 // ── Picked assets ────────────────────────────────────────────────────
 export 'src/picker/picked_asset.dart' show PickedAsset;

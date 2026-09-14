@@ -92,7 +92,7 @@ lint-shell:
 #                      test/platform/web/ (the VM suites must compile
 #                      without a browser target)
 #                    - dart:io outside the native-adapter suites
-#                      (test/runtime, test/saver, test/sharer,
+#                      (test/runtime, test/links, test/saver, test/sharer,
 #                      test/opener — their SUBJECTS wrap dart:io)
 #                      carries an 'io-exempt: <reason>' comment
 #                    - no direct plugin imports anywhere in test/ —
@@ -110,7 +110,7 @@ test-guards:
 	  echo "browser-only import outside test/platform/web/ — the VM suites"; \
 	  echo "must compile without a browser target:"; \
 	  echo "$$bad"; exit 1; fi
-	@bad=$$(for f in $$(grep -rln "dart:io" test/types test/runtime test/batteries test/picker test/harness test/platform/web --include="*.dart" 2>/dev/null); do \
+	@bad=$$(for f in $$(grep -rln "dart:io" test/types test/runtime test/batteries test/picker test/links test/harness test/platform/web --include="*.dart" 2>/dev/null); do \
 	  grep -q "io-exempt:" "$$f" || echo "$$f"; \
 	done); \
 	if [ -n "$$bad" ]; then \
@@ -139,9 +139,9 @@ test-guards:
 test: test-unit test-web
 
 test-unit:
-	@echo "=== Unit: VM (types + runtime + batteries + picker + native adapters) ==="
+	@echo "=== Unit: VM (types + runtime + batteries + picker + links + native adapters) ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/runtime test/batteries test/picker test/saver test/sharer test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
+	$(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/types test/runtime test/batteries test/picker test/links test/saver test/sharer test/opener --file-reporter json:$(TEST_RESULTS_DIR)/unit.json
 
 # Web suites run under `dart test -p chrome`, NOT flutter test: flutter test
 # boots CanvasKit, which hangs on Windows headless Chrome (flutter#162798).
@@ -190,13 +190,22 @@ test-example-matrix:
 	@echo "=== Example: journey matrix (host VM, every device profile) ==="
 	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) test/journeys
 
+# One launch per file: a second file launched right behind the first races
+# the desktop app's log reader and fails to start, so the directory form
+# is not used here.
+INTEGRATION_FILES := $(notdir $(wildcard example/integration_test/*_test.dart))
+
 test-example-macos:
-	@echo "=== Example: integration smoke on macOS ==="
-	cd example && $(FLUTTER) test $(TIMEOUT) integration_test/device_io_smoke_test.dart -d macos
+	@echo "=== Example: integration lanes on macOS ($(INTEGRATION_FILES)) ==="
+	@for f in $(INTEGRATION_FILES); do \
+	  (cd example && $(FLUTTER) test $(TIMEOUT) integration_test/$$f -d macos) || exit 1; \
+	done
 
 test-example-device:
-	@echo "=== Example: integration smoke on device=$(DEVICE) ==="
-	cd example && $(FLUTTER) test $(TIMEOUT) integration_test/device_io_smoke_test.dart -d $(DEVICE)
+	@echo "=== Example: integration lanes on device=$(DEVICE) ($(INTEGRATION_FILES)) ==="
+	@for f in $(INTEGRATION_FILES); do \
+	  (cd example && $(FLUTTER) test $(TIMEOUT) integration_test/$$f -d $(DEVICE)) || exit 1; \
+	done
 
 # Android + iOS run on the connected/booted device — no -d. CI boots the
 # emulator/simulator via the make-target capabilities. The Android JSON
@@ -204,23 +213,23 @@ test-example-device:
 test-example-android:
 	@echo "=== Example: Android ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart --file-reporter json:../$(TEST_RESULTS_DIR)/int-android.json
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test --file-reporter json:../$(TEST_RESULTS_DIR)/int-android.json
 
 test-example-ios:
 	@echo "=== Example: iOS ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart --file-reporter json:../$(TEST_RESULTS_DIR)/int-ios.json
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test --file-reporter json:../$(TEST_RESULTS_DIR)/int-ios.json
 
 test-example-linux:
 	@echo "=== Example: Linux ==="
 	$(call ensure_gtk)
 	@mkdir -p $(TEST_RESULTS_DIR)
-	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart -d linux --file-reporter json:../$(TEST_RESULTS_DIR)/int-linux.json
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test -d linux --file-reporter json:../$(TEST_RESULTS_DIR)/int-linux.json
 
 test-example-windows:
 	@echo "=== Example: Windows ==="
 	@mkdir -p $(TEST_RESULTS_DIR)
-	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test/device_io_smoke_test.dart -d windows --file-reporter json:../$(TEST_RESULTS_DIR)/int-windows.json
+	cd example && $(FLUTTER) test $(VERBOSE) $(TIMEOUT) integration_test -d windows --file-reporter json:../$(TEST_RESULTS_DIR)/int-windows.json
 
 # Web integration runs through flutter drive (-d web-server) with a single
 # Chrome managed by chromedriver — the same shape as pdf_manipulator's web
@@ -234,7 +243,7 @@ test-example-web:
 	sleep 2; \
 	( cd example && $(FLUTTER) drive \
 	    --driver=test_driver/integration_test.dart \
-	    --target=integration_test/device_io_smoke_test.dart \
+	    --target=integration_test \
 	    -d web-server \
 	    --browser-name=chrome \
 	    --driver-port=4444 \

@@ -21,6 +21,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # The web registrant a declared web plugin must name (src/registrants).
+  flutter_web_plugins:
+    sdk: flutter
 
   # Asset/image picking (federated across all six platforms)
   image_picker: ^1.1.2
@@ -62,8 +65,15 @@ dependencies:
   # so importing its Dart would drop desktop platform attribution)
   open_filex: ^4.7.0
 
-  # Full MIME database behind the curated maps in mime_types.dart
+  # Full MIME database behind the curated maps in mime_types.dart — the
+  # curated maps themselves come from virtual_file_store below.
   mime: ^2.0.0
+
+  # The curated MIME↔extension table (mimeTypeForExtension /
+  # extensionForMimeType) — the workspace's one canonical copy. See
+  # docs/UPDATING.md.
+  virtual_file_store:
+    path: ../virtual_file_store
 
   # Annotations (@immutable)
   meta: ^1.16.0
@@ -88,3 +98,30 @@ dev_dependencies:
   # never import the plugins themselves — a make test-guards rule.
   plugin_platform_interface: ^2.1.8
   image_picker_platform_interface: ^2.11.0
+
+flutter:
+  plugin:
+    platforms:
+      # The links door's native halves: persistable document grants and
+      # detached descriptors on Android; in-place document picking,
+      # bookmarks and security scopes on iOS/macOS (one Swift source).
+      android:
+        package: com.whuppi.device_io
+        pluginClass: DeviceIoPlugin
+      ios:
+        pluginClass: DeviceIoPlugin
+        sharedDarwinSource: true
+      macos:
+        pluginClass: DeviceIoPlugin
+        sharedDarwinSource: true
+      # Linux, Windows and the web have no native half — the links door
+      # runs on paths (desktop) or on blobs (web) — but a platform must be
+      # DECLARED for pub.dev to attribute support, and a declared platform
+      # must name a registrant the generated code can call.
+      linux:
+        dartPluginClass: DeviceIoDesktop
+      windows:
+        dartPluginClass: DeviceIoDesktop
+      web:
+        pluginClass: DeviceIoWeb
+        fileName: src/registrants/device_io_web.dart

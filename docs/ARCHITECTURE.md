@@ -1,6 +1,6 @@
 # device_io — Architecture
 
-> **Type:** architecture · **Scope:** device_io · **Status:** SHIPPED · **Last verified:** 2026-07-03
+> **Type:** architecture · **Scope:** device_io · **Status:** SHIPPED · **Last verified:** 2026-09-07
 > **Companion docs:** [`CAPABILITY_ROADMAP.md`](CAPABILITY_ROADMAP.md) (status per capability) · [`UPDATING.md`](UPDATING.md) (maintenance recipes)
 
 What the package IS: the current shipped shape of every layer. When this
@@ -54,6 +54,18 @@ lib/
     runtime/{native,web}/ (world support)
       native/fs.dart           ← dart:io helpers: sanitize / reserve / stage
       web/dom_exception.dart   ← DOM error-name detection for web adapters
+    links/
+      file_handle.dart         ← sealed FilePathHandle / FileDescriptorHandle
+      file_links.dart          ← contract: pickFiles / pickFolder / candidateForPath / children / link / open / unlink / budget
+      file_ref.dart            ← FileRef / FolderRef — the opaque tokens an app stores
+      folder_io.dart           ← contract: read / write / list / delete inside a linked folder
+      link_budget.dart         ← the grant ledger (Android's 128 / 512 cap, a reserve)
+      link_candidate.dart      ← a pick with its verdict, readable OR linkable
+      link_failures.dart       ← typed refusals: missing / not downloaded / permission gone / budget full / not durable
+      link_strength.dart       ← durable · session · none
+      link_token.dart          ← the token codec (the ONLY place a token is parsed)
+      links_channel.dart       ← the method-channel contract both native halves mirror
+      native/  web/            ← three worlds by what the channel answers · blobs only
     opener/
       file_opener.dart         ← contract: openBytes / openPath
       native/  web/            ← OS-open + open_filex channel · blob-tab impl
@@ -67,6 +79,9 @@ lib/
       device_io.dart           ← the DeviceIO container (sync factory + fields)
       resolve.dart             ← conditional export — STUB IS THE DEFAULT (§3)
       resolve_native.dart / resolve_stub.dart / resolve_web.dart
+    registrants/               ← the no-op classes the plugin declaration names for
+      device_io_desktop.dart      Linux / Windows and the web — declaring a platform
+      device_io_web.dart          is what tells pub.dev it is supported
     saver/
       file_saver.dart          ← contract: save / saveStream / saveAs
       save_location.dart       ← sealed SavedAtPath / SavedByBrowser
@@ -78,10 +93,84 @@ lib/
       native/  web/            ← share_plus interface impl · Web Share impl
     types/
       device_io_config.dart    ← DeviceIOConfig for DeviceIO
-      mime_types.dart          ← curated maps + package:mime-backed lookups
+      mime_types.dart          ← curated maps re-exported from virtual_file_store + package:mime-backed lookups
       outcome.dart             ← the sealed result family
     version.dart               ← 0.0.0 placeholder, stamped at release
 ```
+
+---
+
+## 2b. The links door — the one capability with native halves
+
+`FileLinks` is the fifth capability and the first with code of this
+package's own on the other side of a method channel:
+`android/…/DeviceIoPlugin.kt` and `darwin/…/DeviceIoPlugin.swift` (one
+Swift source for iOS and macOS). The wrapped plugins cannot do its job —
+file_picker hands out paths or cached copies, never a persistable grant
+or an in-place URL — so the picking, the grant ledger and the opening are
+native, and `links_channel.dart` is the one contract all three halves
+mirror.
+
+Three worlds, chosen by what the channel ANSWERS, never by asking the OS:
+
+| World | Chosen when | Pick | Link | Handle |
+|---|---|---|---|---|
+| `paths` | no native half registered (Linux, Windows) | file_picker paths | the path is the link | `FilePathHandle` |
+| `android` | the Kotlin half answers | `ACTION_OPEN_DOCUMENT(_TREE)` with `FLAG_GRANT_PERSISTABLE_URI_PERMISSION` | `takePersistableUriPermission`, counted against the cap | `FileDescriptorHandle` — a detached fd, read through `/proc/self/fd` |
+| `darwin` | the Swift half answers | `UIDocumentPickerViewController(asCopy: false)` / `NSOpenPanel` | a bookmark (`withSecurityScope` on macOS; iOS has no such option) | `FilePathHandle` inside a security scope held until `close` |
+
+The verdict (`LinkStrength`) is measured natively: Android `fstat`s the
+descriptor once at pick time (`S_ISREG`) so a cloud provider's pipe is
+`none` before anyone links it; Darwin reads `isRegularFile` and the
+iCloud download status. Dart never infers a platform fact from a name.
+
+Two laws the door holds: **a token is parsed in exactly one file**
+(`link_token.dart`), and **the budget refuses at the reserve** — a
+consumer never meets the OS's own `SecurityException` at grant 128.
+Folder links are the answer to "many files": one grant covers every
+child, and `link` on a child takes none.
+
+---
+
+## 2c. Folder IO — reading and writing inside a linked folder
+
+`FolderIo` (`links/folder_io.dart`) is a content-addressed store built
+on the grant `FileLinks.pickFolder` already holds — `read` / `write` /
+`list` / `delete` by a forward-slash relative path, no picking or
+linking of its own. It reuses the SAME token a `FolderRef` already
+carries:
+
+| Folder token | How the root is reached | Held for |
+|---|---|---|
+| `path:` (Linux, Windows, and the paths world's `pickFolder`) | `dart:io` directly on the path | the one `dart:io` call |
+| `bookmark:` (darwin) | `LinksChannel.open(id: bookmark)` with NO `relative` — the same channel call a file's `open` makes, resolving to the FOLDER's own local path inside a security scope | exactly the length of the one `read` / `write` / `list` / `delete` call, then `closeHandle` |
+| `folder-tree:` (Android) | Four dedicated channel methods (`folderRead` / `folderWrite` / `folderList` / `folderDelete`) — there is no local root at all, so every call crosses the channel, and the Kotlin side resolves the relative path one Storage Access Framework document lookup per segment | the length of the one channel call — no handle to close |
+
+Writes are atomic on the `path:` and `bookmark:` worlds: the bytes land
+at a temporary sibling name in the target's own directory, then a
+rename puts them at the real relative path — a reader never observes a
+half-written object, whichever side of the rename a crash lands on. The
+`folder-tree:` world is NOT atomic the same way — Storage Access
+Framework has no rename-over a document — so the native side writes the
+new bytes to a temporary document first, deletes any existing document
+at the target name, then renames the temporary document into place; a
+crash between the delete and the rename can briefly leave the object
+absent (never torn). `read` of an absent object and `delete` of an
+absent object are both a plain `Success`, never a refusal — a store's
+caller (a sync shelf, most concretely) reads and deletes by label
+without knowing whether anything is there yet.
+
+`pickFolder` takes the tree grant with BOTH read and write persisted
+(`FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION`) —
+files picked through `FileLinks.pickFiles` still take read only, since
+nothing on the file-links door writes. A tree granted before this pair
+existed (read-only) fails a `folder-tree:` write with the same
+`PermissionDenied` a revoked grant would — this door never re-prompts on
+its own; the caller re-picks.
+
+On the web `FolderIo` is `Unsupported` for every method — the same
+reason `pickFolder` already is: a browser hands out no folder grant a
+`FolderRef` could ever have come from.
 
 ---
 
@@ -90,6 +179,7 @@ lib/
 | Situation | Tool | Where |
 |---|---|---|
 | Code cannot compile cross-platform | Conditional import, **stub as default** | `runtime/resolve.dart`, `picker/web_file_pick.dart` |
+| A native half may or may not be registered | Ask the channel; `MissingPluginException` picks the pure-Dart world | `links/native/file_links.dart` (`mode`) |
 | Compiles everywhere, behavior differs | `kIsWeb` const branch (tree-shaken) | picker's file-pick path |
 | Browser capability varies at runtime | Feature detection, graceful ladder | web `saveAs` (File System Access → download), Web Share (`hasProperty` → `canShare`) |
 
@@ -188,7 +278,7 @@ Three layers, every file opening with a CHARTER comment ("this file
 alone proves: ...") and a Diet line naming what it consumes:
 
 1. **Mirror suites (VM)** — tests mirror `lib/src/` one concern per
-   file: `test/types/`, `test/runtime/`, `test/picker/`,
+   file: `test/types/`, `test/runtime/`, `test/picker/`, `test/links/`,
    `test/saver/`, `test/sharer/`, `test/opener/`. Plugins are never
    imported; they're substituted at their platform-INTERFACE seams
    (recording fakes in `test/harness/`) or their method channels are

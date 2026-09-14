@@ -54,20 +54,20 @@ bws_get() {
     $BWS secret list 2>/dev/null | python3 -c "
 import sys,json
 for s in json.load(sys.stdin):
-    if s['key'] == '$1':
+    if s['key'] == sys.argv[1]:
         print(s['value'])
         sys.exit(0)
-" 2>/dev/null
+" "$1" 2>/dev/null
 }
 
 bws_get_id() {
     $BWS secret list 2>/dev/null | python3 -c "
 import sys,json
 for s in json.load(sys.stdin):
-    if s['key'] == '$1':
+    if s['key'] == sys.argv[1]:
         print(s['id'])
         sys.exit(0)
-" 2>/dev/null
+" "$1" 2>/dev/null
 }
 
 bws_set() {
@@ -131,7 +131,7 @@ cmd_rm() {
 
     local ghn
     ghn="$key"
-    if gh secret list --env "$env" --repo "$REPO" 2>/dev/null | grep -qE "^${ghn}[[:space:]]"; then
+    if gh secret list --env "$env" --repo "$REPO" 2>/dev/null | awk -v k="$ghn" '$1 == k { found = 1 } END { exit !found }'; then
         if gh secret delete "$ghn" --env "$env" --repo "$REPO" 2>/dev/null; then
             echo "✓ GitHub:    $REPO → $env → $ghn (deleted)"
         else

@@ -35,6 +35,8 @@ void main() {
       sharer: base.sharer,
       saver: saver,
       opener: RecordingFileOpener(),
+      links: base.links,
+      folders: base.folders,
     );
   });
 

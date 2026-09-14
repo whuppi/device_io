@@ -1,8 +1,12 @@
-/// Centralized MIME type ↔ file extension mappings.
+/// MIME type ↔ file extension lookups.
 ///
-/// The single source of truth for format knowledge in this package.
-/// Every layer that needs to convert between MIME types and extensions
-/// MUST use these mappings — never hardcode extension lists elsewhere.
+/// The curated tables ([mimeToExtension], [extensionToMime]) and the pure
+/// lookups behind them (`mimeTypeForExtension`, `extensionForMimeType`) are
+/// [package:virtual_file_store](https://pub.dev/packages/virtual_file_store)'s — the workspace's
+/// one canonical copy, kept there so pure-Dart code (which cannot depend on
+/// this Flutter plugin package) can share it too. This file adds the
+/// filename- and `package:mime`-database-aware layers device_io needs on
+/// top: [mimeTypeFromFileName] and [extensionFromMimeType].
 ///
 /// ## Design: Why extensions, not MIME types, on disk
 ///
@@ -22,96 +26,57 @@
 ///
 /// ## Curated maps vs full lookup
 ///
-/// The const maps below are the CURATED set — the formats this package's
-/// category sets and consumers commonly branch on. The lookup functions
-/// ([mimeTypeFromFileName], [extensionFromMimeType]) consult the curated
-/// maps first and fall back to `package:mime`'s full database (~1000
+/// The maps re-exported below are the CURATED set — the formats this
+/// package's category sets and consumers commonly branch on. The lookup
+/// functions ([mimeTypeFromFileName], [extensionFromMimeType]) consult the
+/// curated maps first and fall back to `package:mime`'s full database (~1000
 /// entries), so uncommon formats (`.mov`, `.avif`, `.m4a`, ...) still
 /// resolve correctly.
 ///
 /// ## Adding new formats
 ///
-/// Add the MIME type and extension to [mimeToExtension]. The reverse mapping
-/// [extensionToMime] is derived automatically. Then add the extension to the
-/// appropriate category set ([imageExtensions], [audioExtensions], etc.)
-/// so that UI code picks the right icon without hardcoding.
+/// Add the MIME type and extension to virtual_file_store's `mimeToExtension` (see
+/// `virtual_file_store/docs/UPDATING.md`) — this package carries no table of its own.
+/// Then add the extension to the appropriate category set
+/// ([imageExtensions], [audioExtensions], etc.) so that UI code picks the
+/// right icon without hardcoding.
 library;
 
 import 'package:mime/mime.dart' as mime;
+import 'package:virtual_file_store/virtual_file_store.dart' as virtual_file_store;
 
 /// MIME type → file extension (without leading dot) — the curated set.
 ///
-/// Use at write time to derive an on-disk extension from a picker or
-/// transport MIME type. For full-database coverage use
-/// [extensionFromMimeType].
-const Map<String, String> mimeToExtension = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'image/bmp': 'bmp',
-  'image/svg+xml': 'svg',
-  'image/heic': 'heic',
-  'image/heif': 'heif',
-  'audio/mpeg': 'mp3',
-  'audio/wav': 'wav',
-  'audio/ogg': 'ogg',
-  'audio/aac': 'aac',
-  'video/mp4': 'mp4',
-  'video/webm': 'webm',
-  'application/pdf': 'pdf',
-  'application/json': 'json',
-  'application/xml': 'xml',
-  'application/zip': 'zip',
-  'application/msword': 'doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-      'docx',
-  'application/vnd.ms-excel': 'xls',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-  'application/vnd.ms-powerpoint': 'ppt',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-      'pptx',
-  'text/plain': 'txt',
-  'text/csv': 'csv',
-  'text/markdown': 'md',
-  'text/html': 'html',
-  'application/octet-stream': 'bin',
-};
+/// Re-exported from virtual_file_store — see the class doc above.
+const Map<String, String> mimeToExtension = virtual_file_store.mimeToExtension;
 
 /// File extension → MIME type — the curated set.
 ///
-/// Used by asset picker adapters when the platform doesn't provide a MIME
-/// type. Derived from [mimeToExtension] with additional aliases
-/// (e.g. jpeg → image/jpeg). Unmodifiable — a plain literal here would be
-/// public mutable global state.
-final Map<String, String> extensionToMime = Map.unmodifiable({
-  for (final entry in mimeToExtension.entries) entry.value: entry.key,
-  // Aliases not in the reverse map
-  'jpeg': 'image/jpeg',
-  'heif': 'image/heic',
-});
+/// Re-exported from virtual_file_store — see the class doc above.
+final Map<String, String> extensionToMime = virtual_file_store.extensionToMime;
 
 /// Infer a MIME type from a filename's extension.
 ///
-/// Consults the curated [extensionToMime] map first, then `package:mime`'s
-/// full database. Falls back to `application/octet-stream` for unknown
-/// extensions. Used by asset picker adapters when the platform doesn't
-/// report a MIME type.
+/// Consults virtual_file_store's curated `mimeTypeForExtension` first, then
+/// `package:mime`'s full database. Falls back to `application/octet-stream`
+/// for unknown extensions. Used by asset picker adapters when the platform
+/// doesn't report a MIME type.
 String mimeTypeFromFileName(String fileName) {
   final dotIndex = fileName.lastIndexOf('.');
   if (dotIndex < 0) return 'application/octet-stream';
   final ext = fileName.substring(dotIndex + 1).toLowerCase();
-  return extensionToMime[ext] ??
+  return virtual_file_store.mimeTypeForExtension(ext) ??
       mime.lookupMimeType(fileName.toLowerCase()) ??
       'application/octet-stream';
 }
 
 /// Derive a file extension (without leading dot) from a MIME type.
 ///
-/// Consults the curated [mimeToExtension] map first, then `package:mime`'s
-/// full database. Returns [fallback] when the MIME type is unknown.
+/// Consults virtual_file_store's curated `extensionForMimeType` first, then
+/// `package:mime`'s full database. Returns [fallback] when the MIME type is
+/// unknown.
 String extensionFromMimeType(String mimeType, {String fallback = 'bin'}) {
-  return mimeToExtension[mimeType] ??
+  return virtual_file_store.extensionForMimeType(mimeType) ??
       mime.extensionFromMime(mimeType) ??
       fallback;
 }

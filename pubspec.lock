@@ -228,7 +228,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_web_plugins:
-    dependency: transitive
+    dependency: "direct main"
     description: flutter
     source: sdk
     version: "0.0.0"
@@ -765,6 +765,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  virtual_file_store:
+    dependency: "direct main"
+    description:
+      path: "../virtual_file_store"
+      relative: true
+    source: path
+    version: "0.0.0"
   vm_service:
     dependency: transitive
     description:

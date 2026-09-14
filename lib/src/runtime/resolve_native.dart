@@ -1,3 +1,5 @@
+import 'package:device_io/src/links/native/file_links.dart';
+import 'package:device_io/src/links/native/folder_io.dart';
 import 'package:device_io/src/opener/native/file_opener.dart';
 import 'package:device_io/src/picker/plugin_asset_picker.dart';
 import 'package:device_io/src/runtime/device_io.dart';
@@ -12,5 +14,7 @@ DeviceIO resolveDeviceIO({required DeviceIOConfig config}) {
     sharer: NativeSharer(),
     saver: NativeFileSaver(downloadsSubfolder: config.downloadsSubfolder),
     opener: NativeFileOpener(),
+    links: NativeFileLinks(),
+    folders: NativeFolderIo(),
   );
 }

@@ -1,3 +1,5 @@
+import 'package:device_io/src/links/file_links.dart';
+import 'package:device_io/src/links/folder_io.dart';
 import 'package:device_io/src/opener/file_opener.dart';
 import 'package:device_io/src/picker/asset_picker.dart';
 import 'package:device_io/src/runtime/resolve.dart';
@@ -32,6 +34,8 @@ final class DeviceIO {
     required this.sharer,
     required this.saver,
     required this.opener,
+    required this.links,
+    required this.folders,
   });
 
   /// Image/file picking from device gallery, camera, or file system.
@@ -45,4 +49,12 @@ final class DeviceIO {
 
   /// Open files in the OS default viewer (Preview, Photos, etc.).
   final FileOpener opener;
+
+  /// Keep a person's files where they are: pick with keepable access,
+  /// link in place, open later — or copy, when the platform says so.
+  final FileLinks links;
+
+  /// Read, write, list, and delete objects inside a folder [links]
+  /// linked — a content-addressed store built on that grant.
+  final FolderIo folders;
 }

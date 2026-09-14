@@ -6,7 +6,7 @@ body:
     id: what
     attributes:
       label: What happened?
-      placeholder: Describe the bug. Include error messages, the PlatformResult you got, or stack traces if you have them.
+      placeholder: Describe the bug. Include error messages, the Outcome you got, or stack traces if you have them.
     validations:
       required: true
 

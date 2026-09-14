@@ -62,6 +62,7 @@ Future<Outcome<List<PickedAsset>>?> lazyWebFilePick({
         PickedAsset.lazy(
           mimeType: type.isNotEmpty ? type : mimeTypeFromFileName(file.name),
           fileName: file.name,
+          sizeBytes: file.size,
           readBytes: () => _readBytes(file),
           readStream: () => _readStream(file),
         ),

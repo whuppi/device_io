@@ -121,9 +121,13 @@ The App Sandbox gates file access behind entitlements. Add these to **both** `ma
 <!-- silent save into the real Downloads folder -->
 <key>com.apple.security.files.downloads.read-write</key>
 <true/>
+<!-- links — keeping access to a picked file across launches needs a
+     security-scoped bookmark -->
+<key>com.apple.security.files.bookmarks.app-scope</key>
+<true/>
 ```
 
-Skip the Downloads entitlement if you only use `saveAs` — a silent `save` returns `Failed` without it.
+Skip the Downloads entitlement if you only use `saveAs` — a silent `save` returns `Failed` without it. Skip the bookmarks entitlement if you never link: without it every pick is a `session` candidate (readable now, not linkable), so `links.pickFiles` steers you to copy instead of handing out a reference the next launch cannot open.
 
 ### Linux, Windows, Web
 
@@ -406,6 +410,69 @@ await opener.openPath(filePath: '/some/absolute/path/report.pdf');
 
 `openPath` takes an absolute path and returns `Unsupported` on web, where filesystem paths don't exist. Feed the same bytes to `openBytes` there instead.
 
+### Link
+
+`deviceIO.links` keeps a person's file where it is instead of copying it into your app — the door for the 12 GB model, the video library, the document folder. Its picker asks the platform for access it can **keep** (a persistable grant on Android, an in-place URL on iOS and macOS, a path on desktop), which the ordinary picker does not. Every pick comes back as a `LinkCandidate` with a verdict, and both ways forward:
+
+```dart
+final links = deviceIO.links;
+
+final picked = await links.pickFiles(allowedExtensions: ['gguf']);
+if (picked case Success(:final value)) {
+  for (final candidate in value) {
+    if (candidate.strength == LinkStrength.durable) {
+      final linked = await links.link(candidate);           // keep it in place
+      if (linked case Success(:final ref)) store(ref.token, ref.displayName, ref.sizeBytes);
+    } else {
+      await myStore.write(candidate.readStream());           // the copy path
+    }
+  }
+}
+
+// One grant for a whole folder — link the folder, list its files later.
+final folder = await links.pickFolder();
+if (folder case Success(:final value)) {
+  // Or `recursive: true` for every file under it — each candidate then
+  // says which subfolder it sits in (`relativeDirectory`).
+  final kids = await links.children(value, allowedExtensions: ['gguf']);
+}
+
+// Later — open what you stored.
+final opened = await links.open(FileRef.restore(token: token, displayName: name));
+switch (opened) {
+  case Success(value: FilePathHandle(:final path)): loadByPath(path);
+  case Success(value: FileDescriptorHandle(:final fd)): loadByDescriptor(fd);
+  case LinkTargetMissing(): offerRelink();
+  case LinkNotDownloaded(:final startDownload): await startDownload();
+  case LinkPermissionGone(): offerRelink();
+  case Failed(): case Cancelled(): case Unsupported(): showError();
+}
+```
+
+`LinkStrength` is the platform's verdict, made from facts your code cannot see: `durable` when the pick can be kept (link it), `session` when it is readable now but gone at restart, `none` when the provider streams through a pipe or the browser hands out a blob (copy it). You never ask which platform decided.
+
+The copy path can be refused too — a file that moved between the pick and the read, an iCloud placeholder — and then `readStream` fails with a `LinkReadError` whose `refusal` is the same typed answer `open` gives (`LinkTargetMissing`, `LinkNotDownloaded`, `LinkPermissionGone`). Never a raw platform exception.
+
+A file the app can already name — one it saved itself, one a path-based picker handed over — goes through `candidateForPath(path)` and comes back as a candidate with the same verdict a pick would carry, so "keep the model I just downloaded where it is" is the same code as "keep the model the person picked". On the web, where files have no paths, it answers `Unsupported`.
+
+A handle is what the platform can hand over: a path where the process can name the file (desktop, and Apple platforms inside a security scope), a descriptor where it can only read it (Android). Close the handle when everything loaded from it is finished with.
+
+Android caps persistable grants at 128 per app (512 from Android 11). `budget()` reports the ledger; `link` refuses with `LinkBudgetFull` at the cap minus a reserve instead of letting the OS throw. A linked **folder** is one grant for every file under it — the door to use when a person has more than a few.
+
+`deviceIO.folders` reads and writes objects INSIDE a linked folder by a forward-slash relative path — the door for keeping something (a sync shelf, a config store) in a folder the person picked, rather than copying its files out:
+
+```dart
+final folder = await links.pickFolder();
+if (folder case Success(:final value)) {
+  await deviceIO.folders.write(value, 'manifest.json', bytes);
+  final read = await deviceIO.folders.read(value, 'manifest.json');   // null when absent
+  final labels = await deviceIO.folders.list(value, '');              // recursive, sorted
+  await deviceIO.folders.delete(value, 'manifest.json');              // missing is a Success
+}
+```
+
+Writes are atomic on most platforms — the bytes land at a temporary name in the same directory, then a rename puts them in place, so a crash mid-write never leaves a half-written object. An Android folder grant writes the same shape over Storage Access Framework instead, which has no atomic rename-over: the crash window is narrower (delete-then-rename rather than write-then-rename) but not zero — see the platform note in [Platform support](#platform-support). `Unsupported` only on the web, where folders carry no grant at all.
+
 ---
 
 ## Error handling
@@ -457,6 +524,10 @@ One API, six targets. The matrix below is per **method**, and every cell is a ty
 | `saveInto` (picked folder) | ✅ | ✅ | ✅ | ✅ | ✅ | ❌⁸ |
 | `openBytes` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `openPath` / `open(SaveLocation)` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌⁹ |
+| `links.pickFiles` / `link` / `open` | ✅¹⁰ | ✅¹¹ | ✅¹¹ | ✅ | ✅ | ⚠️¹² |
+| `links.pickFolder` / `children` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌¹² |
+| `links.candidateForPath` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌⁹ |
+| `folders.read` / `write` / `list` / `delete` | ⚠️¹³ | ✅ | ✅ | ✅ | ✅ | ❌¹² |
 
 1. Single file picks read lazily everywhere. A **multi**-file pick buffers up front on Firefox/Safari (no File System Access there); Chromium stays lazy.
 2. Mobile browsers ✅ (the file input's `capture` hint opens the camera). Desktop browsers ignore that hint — they'd silently show a plain file picker instead — so the package answers ❌ there rather than fake a capture.
@@ -467,6 +538,10 @@ One API, six targets. The matrix below is per **method**, and every cell is a ty
 7. Desktop has no system camera dialog to borrow — the image_picker desktop implementations throw unless you build your own capture UI. An in-app camera is a widget's job: use the [`camera`](https://pub.dev/packages/camera) plugin. Picking an *existing* photo works fine (`pickImage`).
 8. Browsers don't expose directory paths, so there's no folder to pick or save into. The web equivalent of the pick-once-save-many flow is `saveAs` per file.
 9. Filesystem paths don't exist on web, and a downloaded file belongs to the browser (no handle to reopen). `openBytes` is the web way to put content on screen.
+10. Storage Access Framework with a persistable grant; a handle is a detached descriptor (`FileDescriptorHandle`), read through `/proc/self/fd`. A cloud provider that streams answers `LinkStrength.none` — copy those. The Android 11+ tree picker refuses the storage root and `Download` itself; a subfolder works.
+11. The in-place document picker (iOS) or the open panel (macOS) plus a bookmark; a handle is the path inside a security scope held until `close`. An iCloud placeholder opens as `LinkNotDownloaded` with a `startDownload` you can call.
+12. Browsers hand out blobs, not names: every candidate is `LinkStrength.none` with its bytes on `readStream`; `link`, `open` and folders are typed refusals.
+13. An Android folder grant is a document-tree URI, not a filesystem path — `folders` crosses the channel for every call, resolving the relative path one Storage Access Framework document lookup at a time. Its write is not atomic the way the other platforms are: the provider has no rename-over, so an existing object is deleted only after the replacement has landed at a temporary name, then the temporary name is renamed into place — a crash between those two steps can briefly leave the object absent (never torn). A grant taken read-only before this pair existed fails a write with `PermissionDenied`; re-pick the folder to get the write half.
 
 </details>
 
@@ -485,6 +560,7 @@ Each capability wraps the battle-tested federated plugin for its job — this pa
 | **Share** | share_plus | share_plus | share_plus | share_plus | share_plus | Web Share API |
 | **Save** | path_provider / SAF dialog | path_provider / Files export | path_provider / native dialog | path_provider / native dialog | path_provider / native dialog | blob download / File System Access |
 | **Open** | open_filex | open_filex | OS open | OS open | OS open | blob in new tab |
+| **Link** | SAF + persistable grants (own Kotlin) | document picker + bookmarks (own Swift) | open panel + bookmarks (own Swift) | file_picker paths | file_picker paths | the picker's blobs (copy only) |
 
 How the six-platform guarantee holds under the hood is in [Architecture](docs/ARCHITECTURE.md).
 

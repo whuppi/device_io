@@ -46,6 +46,7 @@ final class PickedAsset {
   const PickedAsset.lazy({
     required this.mimeType,
     this.fileName,
+    this.sizeBytes,
     required Future<Uint8List> Function() readBytes,
     required Stream<List<int>> Function() readStream,
   }) : _readBytes = readBytes,
@@ -60,6 +61,7 @@ final class PickedAsset {
     return PickedAsset.lazy(
       mimeType: mimeType,
       fileName: fileName,
+      sizeBytes: bytes.length,
       readBytes: () async => bytes,
       readStream: () => Stream.value(bytes),
     );
@@ -70,6 +72,11 @@ final class PickedAsset {
 
   /// Original file name, if available.
   final String? fileName;
+
+  /// Total size in bytes, when the platform reports it up front (file
+  /// picks, in-memory bytes). Null when only a stream is known (some
+  /// camera captures) — consumers show indeterminate progress then.
+  final int? sizeBytes;
 
   final Future<Uint8List> Function() _readBytes;
   final Stream<List<int>> Function() _readStream;
