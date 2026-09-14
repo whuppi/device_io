@@ -104,6 +104,7 @@ lint-shell:
 # ═══════════════════════════════════════════════════════════════════
 
 test-guards:
+	@./tool/check_changelog_shape.sh
 	@bad=$$(grep -rln "package:web/\|dart:js_interop" test/ --include="*.dart" \
 	  | grep -v "^test/platform/web/" || true); \
 	if [ -n "$$bad" ]; then \
