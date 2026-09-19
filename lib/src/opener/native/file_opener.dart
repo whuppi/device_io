@@ -31,7 +31,7 @@ final class NativeFileOpener implements FileOpener {
         fileName: fileName,
         write: (f) => f.writeAsBytes(bytes, flush: true),
       );
-      return openPath(filePath: file.path, mimeType: mimeType);
+      return await openPath(filePath: file.path, mimeType: mimeType);
     } catch (e, st) {
       if (e is Error) rethrow; // Programmer bugs crash loudly.
       return Failed('Failed to open "$fileName"', error: e, stackTrace: st);
@@ -49,7 +49,7 @@ final class NativeFileOpener implements FileOpener {
         return Failed('File not found: $filePath');
       }
 
-      return switch (defaultTargetPlatform) {
+      return await switch (defaultTargetPlatform) {
         TargetPlatform.iOS ||
         TargetPlatform.android => _openMobile(filePath, mimeType),
         TargetPlatform.macOS => _openDesktop('open', [filePath]),

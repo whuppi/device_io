@@ -63,13 +63,14 @@ fi
 out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
 
+# DART may be several words ("fvm dart"): split it once, on purpose, into an array,
+# so every call below quotes it and no linter is silenced for it.
+read -ra DART_CMD <<<"$DART"
+
 echo "verify_web_gate_dart: dart2js   — $DART compile js $WEB_ENTRY"
-# DART is intentionally word-split (e.g. "fvm dart").
-# shellcheck disable=SC2086
-$DART compile js -o "$out/main.js" "$WEB_ENTRY"
+"${DART_CMD[@]}" compile js -o "$out/main.js" "$WEB_ENTRY"
 
 echo "verify_web_gate_dart: dart2wasm — $DART compile wasm $WEB_ENTRY"
-# shellcheck disable=SC2086
-$DART compile wasm -o "$out/main.wasm" "$WEB_ENTRY"
+"${DART_CMD[@]}" compile wasm -o "$out/main.wasm" "$WEB_ENTRY"
 
 echo "verify_web_gate_dart: OK — $WEB_ENTRY compiles under dart2js and dart2wasm"

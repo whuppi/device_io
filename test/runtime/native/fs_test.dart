@@ -67,18 +67,14 @@ void main() {
     expect(sanitizeFileName('a\u0000b\u0001c\u007f'), 'abc');
   }, timeout: t(2));
 
-  test(
-    'sanitizeFileName truncates long names, keeping a real extension',
-    () {
-      final name = '${'a' * 300}.txt';
-      final out = sanitizeFileName(name);
-      expect(out.length, 200);
-      expect(out.endsWith('.txt'), isTrue);
-      // Stem was truncated to make room for the 4-char extension.
-      expect(out.substring(0, out.length - 4), 'a' * 196);
-    },
-    timeout: t(2),
-  );
+  test('sanitizeFileName truncates long names, keeping a real extension', () {
+    final name = '${'a' * 300}.txt';
+    final out = sanitizeFileName(name);
+    expect(out.length, 200);
+    expect(out.endsWith('.txt'), isTrue);
+    // Stem was truncated to make room for the 4-char extension.
+    expect(out.substring(0, out.length - 4), 'a' * 196);
+  }, timeout: t(2));
 
   test(
     'sanitizeFileName truncates a >15-char fake extension with the stem',

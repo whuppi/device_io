@@ -43,7 +43,8 @@
 library;
 
 import 'package:mime/mime.dart' as mime;
-import 'package:virtual_file_store/virtual_file_store.dart' as virtual_file_store;
+import 'package:virtual_file_store/virtual_file_store.dart'
+    as virtual_file_store;
 
 /// MIME type → file extension (without leading dot) — the curated set.
 ///

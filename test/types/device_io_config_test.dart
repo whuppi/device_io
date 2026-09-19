@@ -20,13 +20,9 @@ void main() {
     expect(config.downloadsSubfolder, isNull);
   }, timeout: t(1));
 
-  test(
-    'is const-constructible — identical const instances are canonical',
-    () {
-      const a = DeviceIOConfig(downloadsSubfolder: kSubfolder);
-      const b = DeviceIOConfig(downloadsSubfolder: kSubfolder);
-      expect(identical(a, b), isTrue);
-    },
-    timeout: t(1),
-  );
+  test('is const-constructible — identical const instances are canonical', () {
+    const a = DeviceIOConfig(downloadsSubfolder: kSubfolder);
+    const b = DeviceIOConfig(downloadsSubfolder: kSubfolder);
+    expect(identical(a, b), isTrue);
+  }, timeout: t(1));
 }

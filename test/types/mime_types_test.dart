@@ -26,25 +26,17 @@ void main() {
     expect(mimeTypeFromFileName('photo.jpeg'), 'image/jpeg');
   }, timeout: t(2));
 
-  test(
-    'extension lookup is case-insensitive (lowercased before lookup)',
-    () {
-      expect(mimeTypeFromFileName('PHOTO.PNG'), 'image/png');
-      expect(mimeTypeFromFileName('Doc.Pdf'), 'application/pdf');
-    },
-    timeout: t(2),
-  );
+  test('extension lookup is case-insensitive (lowercased before lookup)', () {
+    expect(mimeTypeFromFileName('PHOTO.PNG'), 'image/png');
+    expect(mimeTypeFromFileName('Doc.Pdf'), 'application/pdf');
+  }, timeout: t(2));
 
   // ── mimeTypeFromFileName: package:mime fallback + default ──
 
-  test(
-    'an extension outside the curated set falls back to package:mime',
-    () {
-      // .mov is not in the curated map but is in package:mime's database.
-      expect(mimeTypeFromFileName('movie.mov'), 'video/quicktime');
-    },
-    timeout: t(2),
-  );
+  test('an extension outside the curated set falls back to package:mime', () {
+    // .mov is not in the curated map but is in package:mime's database.
+    expect(mimeTypeFromFileName('movie.mov'), 'video/quicktime');
+  }, timeout: t(2));
 
   test('a garbage extension falls back to application/octet-stream', () {
     expect(mimeTypeFromFileName('file.zzznotreal'), 'application/octet-stream');
@@ -63,14 +55,10 @@ void main() {
     expect(extensionFromMimeType('text/csv'), 'csv');
   }, timeout: t(2));
 
-  test(
-    'a MIME type outside the curated set falls back to package:mime',
-    () {
-      // video/quicktime is not a curated key; package:mime knows .mov.
-      expect(extensionFromMimeType('video/quicktime'), 'mov');
-    },
-    timeout: t(2),
-  );
+  test('a MIME type outside the curated set falls back to package:mime', () {
+    // video/quicktime is not a curated key; package:mime knows .mov.
+    expect(extensionFromMimeType('video/quicktime'), 'mov');
+  }, timeout: t(2));
 
   test('an unknown MIME type returns the fallback (default "bin")', () {
     expect(extensionFromMimeType('application/x-not-real'), 'bin');

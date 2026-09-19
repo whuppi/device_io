@@ -80,13 +80,9 @@ void main() {
       expect((io.saver as NativeFileSaver).downloadsSubfolder, isNull);
     }, timeout: t(3));
 
-    test(
-      'each call resolves a fresh coordinator (no hidden singleton)',
-      () {
-        expect(identical(DeviceIO(), DeviceIO()), isFalse);
-      },
-      timeout: t(3),
-    );
+    test('each call resolves a fresh coordinator (no hidden singleton)', () {
+      expect(identical(DeviceIO(), DeviceIO()), isFalse);
+    }, timeout: t(3));
   });
 
   group('DeviceIO.custom — the injection seam', () {
